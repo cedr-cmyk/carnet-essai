@@ -1,9 +1,9 @@
 // Service worker : appli disponible hors connexion, et fichiers servis à l'adresse _blob/<id>
-const SHELL = "carnet-shell-v10", FILES = "carnet-fichiers-v1";
+const SHELL = "essai19-shell-v1", FILES = "essai19-fichiers-v1"; // noms à part : le carnet normal est sur le même site github.io
 const ASSETS = ["./", "./index.html", "./backend.js", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 let auth = null;
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(SHELL).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
-self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => ![SHELL, FILES].includes(k)).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith("essai19-") && ![SHELL, FILES].includes(k)).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("message", (e) => { if (e.data?.type === "auth") auth = e.data; });
 async function askAuth() {
   const cs = await self.clients.matchAll(); cs.forEach((c) => c.postMessage({ type: "need-auth" }));

@@ -5,7 +5,7 @@
   const CFG = window.CARNET_CONFIG || {};
   window.CARNET_STANDALONE = true;
   window.CARNET_BLOB_BASE = "_blob/";
-  const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+  const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "essai19-auth" } } // connexion séparée du carnet normal (même site github.io));
   const LSK = (k) => "essai19:" + k; // copie d'essai : mémoire locale séparée du carnet normal
   const ls = { get(k, d) { try { const v = localStorage.getItem(LSK(k)); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(LSK(k), JSON.stringify(v)); } catch (e) { console.warn("stockage local plein", e); } } };
   const rid = () => [...crypto.getRandomValues(new Uint8Array(10))].map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
