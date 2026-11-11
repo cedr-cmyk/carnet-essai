@@ -20,13 +20,19 @@
   let bandeau = null;
   async function horsLigne(on, qui = "coach") {
     await domReady();
-    if (!on) { if (bandeau) { bandeau.remove(); bandeau = null; } return; }
+    if (!on) { if (bandeau) { bandeau._pt?.remove(); bandeau.remove(); bandeau = null; } return; }
     if (!bandeau) {
       bandeau = document.createElement("div"); bandeau.id = "hors-ligne"; bandeau.setAttribute("role", "status");
-      bandeau.style.cssText = "position:sticky;top:0;z-index:60;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 14px;background:#78350F;color:#fff;font:600 .9rem/1.3 system-ui,sans-serif;text-align:center";
+      bandeau.style.cssText = "position:relative;z-index:4;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 14px;background:#78350F;color:#fff;font:600 .9rem/1.3 system-ui,sans-serif;text-align:center";
       document.body.prepend(bandeau);
+      // le bandeau défile avec la page (il ne cache plus le bouton retour ni la cible) ; ce petit repère reste visible en bas à gauche, sans bloquer le doigt
+      const pt = document.createElement("div"); pt.id = "hors-ligne-pt"; pt.textContent = "📴"; pt.title = "Hors connexion";
+      pt.style.cssText = "position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom, 0px));z-index:4;pointer-events:none;padding:4px 8px;border-radius:999px;background:#78350F;color:#fff;font:600 .85rem system-ui,sans-serif;opacity:.85";
+      document.body.append(pt); bandeau._pt = pt;
     }
-    bandeau.innerHTML = `<span>📴 Hors connexion : ${qui === "archer" ? "tu vois tes dernières données gardées sur ce téléphone. Pour noter une séance, il faut le réseau." : "tu travailles sur la copie gardée sur cet appareil. Tes modifications partiront dès que le réseau revient."}</span>${qui === "archer" ? `<button type="button" style="font:inherit;padding:4px 12px;border-radius:999px;border:1px solid #fff;background:transparent;color:#fff">Réessayer</button>` : ""}`;
+    bandeau.style.background = qui === "maintenance" ? "#1E3A8A" : "#78350F"; if (bandeau._pt) bandeau._pt.style.background = bandeau.style.background;
+    if (qui === "maintenance") { bandeau.innerHTML = `<span>🛠 Mise à jour du carnet en cours : en attendant, tu es hors ligne. Tu vois tes dernières données, et ce que tu notes est gardé sur ce téléphone : ça partira tout seul à la fin de la mise à jour.</span>`; return; }
+    bandeau.innerHTML = `<span>📴 Hors connexion : ${qui === "archer" ? "tu vois tes dernières données gardées sur ce téléphone. Ce que tu notes est gardé ici et partira dès que le réseau revient." : "tu travailles sur la copie gardée sur cet appareil. Tes modifications partiront dès que le réseau revient."}</span>${qui === "archer" ? `<button type="button" style="font:inherit;padding:4px 12px;border-radius:999px;border:1px solid #fff;background:transparent;color:#fff">Réessayer</button>` : ""}`;
     bandeau.querySelector("button")?.addEventListener("click", () => location.reload());
   }
   async function besoinReseau(msg) {
@@ -236,6 +242,8 @@
 
   // ---------- Accès des archers (côté entraîneur) ----------
   const rpc = async (fn, args) => { const r = await sb.rpc(fn, args); if (r.error) throw new Error(r.error.message); return r.data; };
+  // Mode maintenance (V.1.7.7) : l'entraîneur met l'appli en pause pendant une mise à jour (script maintenance.sql)
+  window.carnetMaintenance = { etat: () => rpc("etat_maintenance"), basculer: (on) => rpc("basculer_maintenance", { p_actif: !!on }) };
   window.carnetAcces = {
     inviter: (archerId) => rpc("creer_invitation", { p_archer: archerId }),
     liste: (archerId) => rpc("acces_archer", { p_archer: archerId }),
@@ -268,7 +276,7 @@
       });
     });
   }
-  async function archerMode(net = true, coach = false) {
+  async function archerMode(net = true, coach = false, maint = false) {
     let list = null;
     if (net) { try { list = await withTimeout(rpc("mes_acces")); ls.set("ar-acces", list); } catch (e) { if (!netErr(e)) throw e; } }
     if (!list) list = ls.get("ar-acces", null);
@@ -295,7 +303,7 @@
       fichiers: (a) => { filesOwner = a.owner; tellSW(); },
       ajouterCode: async (code) => { await rpc("utiliser_invitation", { p_code: code }); return rpc("mes_acces"); },
       deconnexion: () => window.carnetLogout(),
-      ...(coach ? { versCoach: () => { ls.set("mode", "coach"); location.reload(); } } : {}),
+      ...(coach ? { versCoach: () => { try { sessionStorage.removeItem("apercu-maint"); } catch (e) { /* rien */ } ls.set("mode", "coach"); location.reload(); } } : {}),
     };
     // V.1.7.1 : l'espace archer est gardé sur le téléphone pour être consulté sans réseau ; les envois disent clairement quand le réseau manque
     const API = window.carnetArcherAPI, envoi = (f) => async (...a) => { try { return await withTimeout(f(...a), 12000); } catch (e) { throw netErr(e) ? new Error("pas de réseau, réessaie quand tu auras internet") : e; } };
@@ -306,6 +314,38 @@
       catch (e) { const d = ls.get(k, null); if (d) { horsLigne(true, "archer"); return d; } throw netErr(e) ? new Error("Pas de réseau. Ouvre ton espace une fois avec internet : il sera ensuite gardé sur ce téléphone.") : e; }
     };
     ["ecrire", "supprimer", "repondre", "avatar", "mot", "ajouterCode"].forEach((n) => { if (API[n]) API[n] = envoi(API[n]); });
+    // Hors connexion : une séance ou un tir noté sans réseau est gardé sur le téléphone, apparaît tout de suite dans le carnet, et part tout seul dès que le réseau revient
+    const ecrireNet = API.ecrire, chargerNet = API.charger, kAtt = "ar-attente";
+    const fusion = (a, d) => { if (!d || !Array.isArray(d.entrees)) return d; Object.values(ls.get(kAtt, {})).filter((w) => w.a.owner === a.owner && w.a.archer_id === a.archer_id).forEach((w) => { const i = d.entrees.findIndex((x) => x.id === w.id), e = { ...(i >= 0 ? d.entrees[i] : {}), ...w.data, id: w.id }; if (i >= 0) d.entrees[i] = e; else d.entrees.push(e); }); return d; };
+    let envoiEnCours = false;
+    async function viderAttente() {
+      if (maint || envoiEnCours || !Object.keys(ls.get(kAtt, {})).length) return; envoiEnCours = true;
+      try { for (const [cle, w] of Object.entries(ls.get(kAtt, {}))) { await ecrireNet(w.a, w.id, w.data); const r = ls.get(kAtt, {}); delete r[cle]; ls.set(kAtt, r); } }
+      catch (e) { console.warn("envoi en attente : réessai au retour du réseau", e); } finally { envoiEnCours = false; }
+    }
+    const garder = (a, id, data) => {
+      const att = ls.get(kAtt, {}); att[`${a.owner}:${a.archer_id}:${id}`] = { a: { owner: a.owner, archer_id: a.archer_id }, id, data, at: Date.now() }; ls.set(kAtt, att);
+      const k = `ar-espace:${a.owner}:${a.archer_id}`, d = ls.get(k, null); if (d) ls.set(k, fusion(a, d));
+      return { enAttente: true };
+    };
+    API.ecrire = async (a, id, data) => {
+      if (maint) return garder(a, id, data);
+      try { const r = await ecrireNet(a, id, data); viderAttente(); return r; }
+      catch (e) {
+        if (!/pas de réseau/.test(e.message)) throw e;
+        horsLigne(true, "archer"); return garder(a, id, data);
+      }
+    };
+    API.charger = async (a) => { const d = fusion(a, await chargerNet(a)); viderAttente(); return d; };
+    API.enAttente = () => Object.keys(ls.get(kAtt, {})).length;
+    addEventListener("online", () => viderAttente());
+    if (maint) {
+      // Mode maintenance : l'espace s'ouvre hors connexion sur la copie du téléphone ; l'appli regarde chaque minute si la mise à jour est finie
+      API.charger = async (a) => { let d = ls.get(`ar-espace:${a.owner}:${a.archer_id}`, null); if (!d && coach) d = await chargerNet(a).catch(() => null); if (!d) return besoinReseau("Le carnet est en cours de mise à jour. Reviens dans un petit moment."); horsLigne(true, "maintenance"); return fusion(a, d); };
+      // aperçu de l'entraîneur : on reste en maintenance jusqu'au retour en mode entraîneur
+      if (coach) setTimeout(() => { const t = document.querySelector("#toast"); if (t) { t.textContent = "Aperçu : voici ce que voient tes archers pendant la maintenance"; t.hidden = false; setTimeout(() => (t.hidden = true), 4000); } }, 1500);
+      else { const veille = setInterval(async () => { try { const e = await withTimeout(rpc("etat_maintenance"), 6000); if (!e?.actif) { clearInterval(veille); location.reload(); } } catch (err) { /* pas de réseau : on réessaie dans une minute */ } }, 60000); }
+    }
     window.CarnetArcherUI(window.carnetArcherAPI);
     return new Promise(() => {}); // l'application de l'entraîneur ne démarre pas
   }
@@ -319,10 +359,10 @@
       try { coach = await withTimeout(rpc("est_coach"), 4000); ls.set("coach", coach); } catch (e) { console.warn(e); if (netErr(e)) net = false; }
     }
     if (coach === null && !net) return besoinReseau("Pas de réseau. La première ouverture du carnet a besoin d'internet.");
-    if (coach === false) { if (!session.offline) sb.auth.onAuthStateChange((_e, s) => { if (s) { session = s; tellSW(); } }); return archerMode(net); }
+    if (coach === false) { if (!session.offline) sb.auth.onAuthStateChange((_e, s) => { if (s) { session = s; tellSW(); } }); let maint = false; if (net) { try { maint = !!(await withTimeout(rpc("etat_maintenance"), 4000))?.actif; } catch (e) { /* script pas encore installé ou pas de réseau */ } } return archerMode(net, false, maint); }
     // entraîneur qui a choisi son espace archer (Paramètres › Général › Mon espace archer) ; adresse ?mode=coach = retour forcé en entraîneur
     if (/[?&]mode=coach\b/.test(location.search)) { ls.set("mode", "coach"); history.replaceState(null, "", location.pathname + location.hash); }
-    if (ls.get("mode", "coach") === "archer") { if (!session.offline) sb.auth.onAuthStateChange((_e, s) => { if (s) { session = s; tellSW(); } }); return archerMode(net, true); }
+    if (ls.get("mode", "coach") === "archer") { if (!session.offline) sb.auth.onAuthStateChange((_e, s) => { if (s) { session = s; tellSW(); } }); let apercu = false; try { apercu = sessionStorage.getItem("apercu-maint") === "1"; } catch (e) { /* rien */ } return archerMode(net, true, apercu); }
     if (!session.offline) {
       sb.auth.onAuthStateChange((_e, s) => { if (s) { session = s; tellSW(); } });
       tellSW();
@@ -340,4 +380,37 @@
       return { db, assets: session.offline ? null : assets, downloads, user, sample: null }[name] ?? null;
     },
   };
+})();
+
+// Bouton retour du téléphone (V.1.7.10) : au lieu de quitter l'appli, il ferme la fenêtre ouverte (feuille, cible, chrono…),
+// sinon revient à la page précédente (« ← … »), sinon à l'accueil. À l'accueil, il faut appuyer deux fois pour quitter.
+(() => {
+  if (window.__carnetRetour) return; window.__carnetRetour = true;
+  const garde = () => { try { history.pushState({ carnetGarde: Date.now() }, ""); } catch (e) { /* rien */ } };
+  const visible = (x) => !!x && x.getClientRects().length > 0;
+  const msg = (t) => { const el = document.querySelector("#toast"); if (!el) return; el.textContent = t; el.hidden = false; clearTimeout(msg.h); msg.h = setTimeout(() => (el.hidden = true), 2400); };
+  function reculer() {
+    const ch = [...document.querySelectorAll(".chrono")].filter(visible).pop();
+    if (ch) {
+      const x = ch.querySelector('[data-ch="close"]'), arret = !!ch.querySelector('[data-ch="set"]');
+      if (x && !arret) { msg("Chrono en cours : touche ✕ pour l'arrêter"); return true; }
+      if (x) x.click(); else ch.remove(); return true;
+    }
+    const bg = [...document.querySelectorAll(".sheet-bg")].filter(visible).pop();
+    if (bg) { const non = bg.querySelector("#tg-no") || [...bg.querySelectorAll(".acts [data-close]")].pop(); if (non) non.click(); else bg.remove(); return true; }
+    const pv = [...document.querySelectorAll(".ar-preview")].filter(visible).pop();
+    if (pv) { const b = [...pv.querySelectorAll("button")].find((x) => /Fermer|Quitter|Retour/i.test(x.textContent)); if (b) b.click(); else pv.remove(); return true; }
+    const back = [...document.querySelectorAll('[data-act="back"]')].find(visible);
+    if (back) { back.click(); return true; }
+    const tabs = [...document.querySelectorAll("[data-atab], #tabs [data-tab]")].filter(visible);
+    if (tabs.length && tabs[0].getAttribute("aria-selected") !== "true") { tabs[0].click(); scrollTo(0, 0); return true; }
+    return false;
+  }
+  addEventListener("popstate", () => {
+    if (reculer()) { garde(); return; }
+    // à l'accueil : on laisse le prochain appui quitter l'appli, et on se remet en garde après quelques secondes
+    msg("Appuie encore sur retour pour quitter l'appli");
+    setTimeout(() => { if (!history.state?.carnetGarde) garde(); }, 2500);
+  });
+  if (!history.state?.carnetGarde) garde();
 })();
