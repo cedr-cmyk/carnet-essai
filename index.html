@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator) {
 </script>
 </head>
 <body>
-<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.3 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
+<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.4 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -1921,7 +1921,8 @@ try { const c = localStorage.getItem("club"); if (c) S.club = c; } catch (e) {}
 // « Regardée » = l'entraîneur a ouvert la fiche de l'archer. Mémorisé dans les paramètres (vaut sur tous ses appareils).
 let nouvCache = { at: 0, entries: [], enCours: false };
 async function chargerNouv() {
-  if (!S.db || nouvCache.enCours || Date.now() - nouvCache.at < 60000) return;
+  // attendre que les paramètres soient chargés : sinon la mémoire « déjà regardé » est lue vide (et écrasée) au démarrage
+  if (!S.db || !S.loaded.parametres || nouvCache.enCours || Date.now() - nouvCache.at < 60000) return;
   nouvCache.enCours = true;
   try {
     const snap = await S.db.collection("carnetEntrees").where("saisiParArcher", "==", true).get();
@@ -1934,7 +1935,12 @@ const vuMap = () => { try { return JSON.parse(prm().vuSeancesJson || "{}") || {}
 function nouvDe(aid) { const vu = vuMap(), dep = vu[aid] || vu._debut || Date.now() - 14 * 864e5; return nouvCache.entries.filter((e) => e.archerId === aid && e.saisiParArcher && (e.majArcher || e.createdAt || 0) > dep).length; }
 const bulleNouv = (aid) => { const n = nouvDe(aid); return n ? ` <span class="bulle" title="${n} séance${n > 1 ? "s" : ""} ou tir${n > 1 ? "s" : ""} noté${n > 1 ? "s" : ""} que tu n'as pas encore regardé${n > 1 ? "s" : ""}">${n}</span>` : ""; };
 const nouvTotal = () => S.archers.filter((a) => a.actif !== false).reduce((t, a) => t + nouvDe(a.id), 0);
-function marquerVu(aid) { if (!nouvDe(aid)) return; const vu = vuMap(); vu[aid] = Date.now(); setParam({ vuSeancesJson: JSON.stringify(vu) }); }
+function marquerVu(aid) {
+  if (!S.loaded.parametres || !nouvDe(aid)) return;
+  // au moins l'heure de la dernière séance notée (si l'horloge du téléphone de l'archer est en avance)
+  const der = Math.max(0, ...nouvCache.entries.filter((e) => e.archerId === aid).map((e) => e.majArcher || e.createdAt || 0));
+  const vu = vuMap(); vu[aid] = Math.max(Date.now(), der); setParam({ vuSeancesJson: JSON.stringify(vu) });
+}
 function renderTabs() {
   chargerNouv();
   const counts = { seances: S.seances.length, archers: S.archers.length, clubs: S.clubs.length, exos: S.documents.length, concours: S.concours.filter((c) => (c.dateFin || c.date) >= todayISO()).length };
@@ -5769,6 +5775,7 @@ function setParam(obj) {
   const cur = S.parametres.find((x) => x.id === "general");
   const merge = (a, b) => { const o = { ...(a || {}) }; Object.entries(b).forEach(([k, v]) => { o[k] = v && typeof v === "object" && !Array.isArray(v) ? merge(o[k], v) : v; }); return o; };
   if (cur) { Object.assign(cur, merge(cur, obj)); patch("parametres", "general", obj); }
+  else if (!S.loaded.parametres) return; // paramètres pas encore chargés : ne jamais écraser ceux qui sont enregistrés
   else { const data = merge(P_DEF, obj); S.parametres.push({ id: "general", ...data }); save("parametres", "general", data); }
   applyParams();
 }
