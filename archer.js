@@ -529,7 +529,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
     if (!shownTabs.some(([k]) => k === St.tab) && !["carnet", "evaluations"].includes(St.tab)) St.tab = "accueil";
     top.innerHTML = `<div class="top-in"><div class="brand">${window.CarnetAvatar && St.data?.archer ? "" : `<span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg></span>`}
       ${window.CarnetAvatar && St.data?.archer ? window.CarnetAvatar.svg(St.data.archer, 40) : ""}
-      <h1>Espace <em>${esc(St.data?.archer ? name(St.data.archer) : name(who()))}</em></h1><span class="sub">${PREVIEW || TESTW ? "" : API.versCoach ? `<button class="btn" id="ar-coach">↩ Mode entraîneur</button>` : `<button class="btn ghost" id="ar-out">Se déconnecter</button>`}</span></div>
+      <div class="ar-nom"><h1>Espace <em>${esc(St.data?.archer ? name(St.data.archer) : name(who()))}</em></h1>${window.CarnetBadges && St.data?.archer ? window.CarnetBadges.html(St.data.archer) : ""}</div><span class="sub">${PREVIEW || TESTW ? "" : API.versCoach ? `<button class="btn" id="ar-coach">↩ Mode entraîneur</button>` : `<button class="btn ghost" id="ar-out">Se déconnecter</button>`}</span></div>
       <nav class="tabs" role="tablist">${shownTabs.map(([k, l]) => `<button class="tab" role="tab" aria-selected="${St.tab === k}" data-atab="${k}">${l}</button>`).join("")}</nav></div>`;
   }
   function render() {
@@ -1075,7 +1075,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
     const nbs = [[1, "1"], [2, "2"], [3, "3 (par défaut)"], [4, "4"], [5, "5"], [6, "6"], [8, "8"], [0, "Tous (6 semaines)"]];
     return `<div class="ar-params">
       <section class="card"><h3 class="hub-h">Mon avatar</h3>
-        <div class="av-prev">${window.CarnetAvatar ? window.CarnetAvatar.svg(a, 72) : ""}<div style="display:grid;gap:6px"><b>${esc(name(a))}</b><button class="btn" data-act="avatar">Changer d'avatar</button></div></div>
+        <div class="av-prev">${window.CarnetAvatar ? window.CarnetAvatar.svg(a, 72) : ""}<div style="display:grid;gap:6px"><b>${esc(name(a))}</b>${window.CarnetBadges ? window.CarnetBadges.html(a) : ""}<button class="btn" data-act="avatar">Changer d'avatar</button></div></div>
         <span class="tirline">Un dessin à choisir, ou tes initiales. Ton entraîneur le voit sur ses listes.</span></section>
       ${TC() && API.demander ? (() => {
         const esp = a.espace || {}, dm = esp.demandes || {};
