@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator) {
 </script>
 </head>
 <body>
-<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.31 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
+<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.32 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -867,6 +867,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; color:
 /* Téléphone : l'accueil ne déborde plus sur les bords (cartes qui ne s'élargissent pas avec leur contenu, lignes qui passent à la ligne) */
 .hub-grid { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
 .hub-grid > *, .hub-stats > *, .wrap > * { min-width: 0; }
+/* V.1.10 : sur ordinateur, le carnet de l'entraîneur prend plus de largeur (l'espace archer garde sa largeur de lecture) */
+@media (min-width: 1100px) { .wrap, .top-in { max-width: min(1440px, calc(100vw - 64px)); } .ar-root .wrap, .ar-root .top-in { max-width: 920px; } }
 .hub-bar { flex-wrap: wrap; } .hub-bar .hub-h { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 600px) {
   .hub-grid .row, .wrap > .card .list > .row { flex-wrap: wrap; row-gap: 6px; }
