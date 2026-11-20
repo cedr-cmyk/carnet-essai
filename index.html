@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator) {
 </script>
 </head>
 <body>
-<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.36 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
+<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.37 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -2651,7 +2651,7 @@ const remove = (col, id) => write(`${col}/${id}`, () => S.db.collection(col).doc
 const newId = (col) => S.db.collection(col).doc().id;
 
 // ---------- Navigation ----------
-const TABS = [["accueil", "Accueil"], ["seances", "Séances"], ["archers", "Archers"], ["clubs", "Clubs"], ["exos", "Documents"], ["concours", "Concours"], ["materiel", "Matériel"], ["animations", "Animations"], ["retours", "Retours"], ["parametres", "Paramètres"]];
+const TABS = [["accueil", "Accueil"], ["seances", "Séances"], ["archers", "Archers"], ["clubs", "Clubs"], ["exos", "Documents"], ["concours", "Concours"], ["materiel", "Matériel"], ["animations", "Animations"], ["retours", "★ Partenaires"], ["parametres", "Paramètres"]];
 // V.1.10 : encadrant / animateur connecté au carnet de l'entraîneur (droits choisis dans Paramètres › Accès)
 const ENC = () => window.CARNET_ENCADRANT || null;
 const encDroits = () => ENC()?.droits || {};
@@ -5218,7 +5218,7 @@ function viewFil() {
 }
 function viewRetours() {
   const vue = S.rtVue || "retours", nfl = filNonLus().length;
-  const vueChips = `<div class="chips" role="tablist" aria-label="Vue">${[["retours", `Retours${rtNouveaux().length ? ` (${rtNouveaux().length})` : ""}`], ["fil", `💬 Fil des partenaires${nfl ? ` (${nfl})` : ""}`]].map(([k, l]) => `<button class="chip" role="tab" data-rtvue="${k}" aria-pressed="${vue === k}">${l}</button>`).join("")}</div>`;
+  const vueChips = `<div class="chips" role="tablist" aria-label="Vue">${[["retours", `Retours et demandes${rtNouveaux().length ? ` (${rtNouveaux().length})` : ""}`], ["fil", `💬 Fil des partenaires${nfl ? ` (${nfl})` : ""}`]].map(([k, l]) => `<button class="chip" role="tab" data-rtvue="${k}" aria-pressed="${vue === k}">${l}</button>`).join("")}</div>`;
   if (vue === "fil") return `<div class="head"><span class="pill">Testeurs et partenaires</span><h2>Fil des partenaires</h2></div>${vueChips}${viewFil()}`;
   return retoursListeVue(vueChips);
 }
