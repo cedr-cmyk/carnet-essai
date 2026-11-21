@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator) {
 </script>
 </head>
 <body>
-<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.42 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
+<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.43 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -5897,7 +5897,7 @@ document.addEventListener("click", (e) => {
 function seancesArcherCard(a) {
   loadTc(a.id);
   const mes = S.seances.filter((s) => dansSeance(a, s)), t = todayISO();
-  const avenir = mes.filter((s) => s.date >= t).sort((p, q) => p.date.localeCompare(q.date)).slice(0, 6), passees = mes.filter((s) => s.date < t).sort((p, q) => q.date.localeCompare(p.date));
+  const avenir = mes.filter((s) => s.date >= t).sort((p, q) => p.date.localeCompare(q.date)).slice(0, 6), passees = mes.filter((s) => s.date < t && (s.presents || []).includes(a.id)).sort((p, q) => q.date.localeCompare(p.date)); // passées : seulement celles où il était présent
   const ents = tcCache.aid === a.id ? tcCache.list : [], lim = S.ficheSeancesTout ? passees.length : 15;
   const row = (s) => { const v = getSuivi(s, a.id), e = ents.find((x) => x.seanceId === s.id), nf = S.attributions.filter((x) => x.archerId === a.id && x.seanceId === s.id).length, pg = s.date >= t ? progPour(a, s).length : 0;
     const tags = [hasSuivi(s, a.id) ? "📝 ton suivi" : "", e ? "📒 son carnet" + (e.note ? ` (${e.note}/10)` : "") : "", nf ? `📄 ${nf} fiche${nf > 1 ? "s" : ""}` : "", pg ? `🎯 ${pg} prévu${pg > 1 ? "s" : ""}` : "", (s.invites || []).includes(a.id) ? "invité" : ""].filter(Boolean);
@@ -5905,7 +5905,7 @@ function seancesArcherCard(a) {
       <span class="m">${esc(clubName(s.clubId))} · ${esc(s.theme || "Entraînement")}</span>${v.note ? `<p class="prev">${esc(v.note)}</p>` : ""}${v.tirs.map((tt) => `<span class="tirline" style="display:block">${esc(tirSum(tt))}</span>`).join("")}
       ${tags.length ? `<span class="tirline" style="display:block">${esc(tags.join(" · "))}</span>` : ""}</span><span class="count" aria-hidden="true">›</span></button>`; };
   return `${avenir.length ? `<h2 class="sec">À venir</h2><div class="list">${avenir.map(row).join("")}</div>` : ""}
-    <h2 class="sec">Séances passées</h2>${passees.length ? `<div class="list">${passees.slice(0, lim).map(row).join("")}</div>${passees.length > lim ? `<button class="btn ghost" data-act="fiche-seances-tout">Voir les ${passees.length - lim} plus anciennes</button>` : ""}` : `<p class="notice">Aucune séance passée dans ses clubs pour l'instant.</p>`}`;
+    <h2 class="sec">Séances où ${esc(a.prenom || "l'archer")} était là</h2>${passees.length ? `<div class="list">${passees.slice(0, lim).map(row).join("")}</div>${passees.length > lim ? `<button class="btn ghost" data-act="fiche-seances-tout">Voir les ${passees.length - lim} plus anciennes</button>` : ""}` : `<p class="notice">Aucune séance passée où ${esc(a.prenom || "l'archer")} est marqué dans l'appel.</p>`}`;
 }
 function viewArcher() {
   const a = S.archers.find((x) => x.id === S.archer);
