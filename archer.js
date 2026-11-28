@@ -243,9 +243,12 @@ window.CarnetRun = (() => {
       <span class="tirline">${imps.length} flèche${imps.length > 1 ? "s" : ""} placée${imps.length > 1 ? "s" : ""}, ramenées sur une seule cible (en rouge : à côté). ${tc}</span></div>`;
   }
   const ouvert = (a) => a?.espace?.run === true; // ouvert par l'entraîneur sur la fiche de l'archer
-  const mmss = (ms) => { if (ms == null || !isFinite(ms)) return "—"; const s = Math.max(0, ms) / 1000, m = Math.floor(s / 60); return `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}${s < 600 ? "," + Math.floor((s * 10) % 10) : ""}`; };
+  // affichage d'un temps : centièmes s'il y en a (ex. 14:58,40), sinon dixièmes sous 10 min
+  const mmss = (ms) => { if (ms == null || !isFinite(ms)) return "—"; const c = Math.round(Math.max(0, ms) / 10), m = Math.floor(c / 6000), sec = Math.floor((c % 6000) / 100), cc = c % 100;
+    return `${m}:${String(sec).padStart(2, "0")}${cc % 10 ? "," + String(cc).padStart(2, "0") : c < 60000 || cc ? "," + Math.floor(cc / 10) : ""}`; };
+  const vif = (ms) => mmss(Math.floor(ms / 100) * 100); // chrono qui tourne : au dixième
   // accepte 12:45, 12.45, 12,45 ou 12 45 (minutes puis secondes : le clavier chiffres du téléphone n'a pas les deux-points), 45 ou 45,3 (secondes)
-  const lireTemps = (x) => { const y = String(x || "").trim(), d = y.match(/^(\d+)[.,\s](\d{2})(?:[.,](\d))?$/); if (d) return ((Number(d[1]) * 60) + Number(d[2])) * 1000 + Number(d[3] || 0) * 100; const m = String(x || "").trim().match(/^(?:(\d+)[:h'])?(\d{1,2})(?:[,.](\d))?$/) || String(x || "").trim().match(/^(\d+)[:'](\d{1,2})(?:[:'"](\d{1,2}))?$/); if (!m) return null; return ((Number(m[1] || 0) * 60) + Number(m[2])) * 1000 + Number(m[3] || 0) * 100; };
+  const lireTemps = (x) => { const y = String(x || "").trim(), d = y.match(/^(\d+)[.,\s](\d{2})(?:[.,](\d{1,2}))?$/); if (d) return ((Number(d[1]) * 60) + Number(d[2])) * 1000 + Number((d[3] || "0").padEnd(2, "0")) * 10; const m = String(x || "").trim().match(/^(?:(\d+)[:h'])?(\d{1,2})(?:[,.](\d))?$/) || String(x || "").trim().match(/^(\d+)[:'](\d{1,2})(?:[:'"](\d{1,2}))?$/); if (!m) return null; return ((Number(m[1] || 0) * 60) + Number(m[2])) * 1000 + Number(m[3] || 0) * 100; };
   // étapes : course 1, tir 1, course 2, tir 2… dernière course jusqu'à l'arrivée
   const etapes = (r) => { const l = []; for (let k = 0; k < r.boucles; k++) { l.push({ k: "course", n: k }); if (k < r.positions.length) l.push({ k: "tir", n: k }); } return l; };
   function stats(t) {
@@ -309,7 +312,7 @@ window.CarnetRun = (() => {
       const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>
         ${fin ? `<div class="ar-pts-big">${mmss(stats(t).temps)}<span>${esc(resume(t))}</span></div>${feuille(t)}` : `
         <div class="ar-pts-big"><span id="run-tot" style="font-size:3.2rem;font-weight:800;color:var(--accent)">${mmss(r.depart ? Date.now() - r.depart : 0)}</span><span>${!r.depart ? "Prêt ?" : e.k === "course" ? `🏃 Boucle ${e.n + 1} / ${r.boucles} · ${r.long} m${penAvant ? ` + ${penAvant} pénalité${penAvant > 1 ? "s" : ""} de ${r.penal} m` : ""}${e.n === r.boucles - 1 ? " → arrivée" : " → pas de tir"}` : `🎯 Tir ${e.n + 1} / ${r.positions.length} · ${POS[r.positions[e.n]]} · ${r.cibles} cibles à ${r.dist} m`}</span>
-          ${r.depart ? `<small class="tirline">étape : <span id="run-seg">${mmss(depuis())}</span></small>` : ""}</div>
+          ${r.depart ? `<small class="tirline">étape : <span id="run-seg">${vif(depuis())}</span></small>` : ""}</div>
         ${tirN ? `<div class="f">Cibles touchées<div class="seg-mode" role="group">${Array.from({ length: r.cibles + 1 }, (_, k) => `<button type="button" data-rt="${k}" aria-pressed="${tirN.touchees === k}">${k}</button>`).join("")}</div></div>
           <div class="f">Flèches tirées<div class="seg-mode" role="group">${Array.from({ length: r.fleches }, (_, k) => k + 1).map((k) => `<button type="button" data-rf="${k}" aria-pressed="${tirN.fleches === k}">${k}</button>`).join("")}</div></div>
           ${tirN.touchees != null && tirN.touchees < r.cibles ? `<p class="notice">${r.cibles - tirN.touchees} boucle${r.cibles - tirN.touchees > 1 ? "s" : ""} de pénalité de ${r.penal} m à faire en repartant.</p>` : ""}` : ""}
@@ -318,7 +321,7 @@ window.CarnetRun = (() => {
         <div class="acts"><button type="button" class="btn danger left" data-rab>${o.tir ? "Annuler les modifications" : "Abandonner"}</button>${fin ? "" : `<button type="button" class="btn" data-rquit>Plus tard</button>`}<button type="button" class="btn ${fin ? "primary" : ""}" data-rfin ${r.segs.length || fin ? "" : "disabled"}>${fin ? "Enregistrer" : "Arrêter ici"}</button></div>
         <span class="tirline">${o.cle && !fin ? "Le chrono continue même si tu fermes : « Plus tard » le retrouve. " : ""}Une boucle de pénalité par cible manquée, comptée dans le temps de la boucle suivante.</span>`);
       clearInterval(tick);
-      if (r.depart && !fin) tick = setInterval(() => { if (ferme) return clearInterval(tick); const a = box.querySelector("#run-tot"), b = box.querySelector("#run-seg"); if (a) a.textContent = mmss(Date.now() - r.depart); if (b) b.textContent = mmss(depuis()); }, 100);
+      if (r.depart && !fin) tick = setInterval(() => { if (ferme) return clearInterval(tick); const a = box.querySelector("#run-tot"), b = box.querySelector("#run-seg"); if (a) a.textContent = vif(Date.now() - r.depart); if (b) b.textContent = vif(depuis()); }, 100);
       box.addEventListener("click", (ev) => {
         const b = ev.target.closest("button"); if (!b) return;
         if (b.dataset.rt) { tirN.touchees = Number(b.dataset.rt); if (tirN.fleches == null && r.fleches === r.cibles) tirN.fleches = r.cibles; garder(); return chrono(); }
@@ -338,7 +341,7 @@ window.CarnetRun = (() => {
         <div class="acts"><button type="button" class="btn danger left" data-rab>Abandonner</button><button type="button" class="btn" data-rquit>Plus tard</button></div>
         <span class="tirline">${r.depart ? "Le chrono continue même si tu fermes l'appli ou éteins l'écran." : "Appuie sur Départ au moment de partir."}</span>`);
       clearInterval(tick);
-      if (r.depart) tick = setInterval(() => { if (ferme) return clearInterval(tick); const a = box.querySelector("#run-tot"); if (a) a.textContent = mmss(Date.now() - r.depart); }, 100);
+      if (r.depart) tick = setInterval(() => { if (ferme) return clearInterval(tick); const a = box.querySelector("#run-tot"); if (a) a.textContent = vif(Date.now() - r.depart); }, 100);
       box.addEventListener("click", (ev) => {
         const b = ev.target.closest("button"); if (!b) return;
         if (b.hasAttribute("data-sgo")) { if (!r.depart) { r.depart = Date.now(); garder(); return simple(); } r.temps = Date.now() - r.depart; r.arrive = true; clearInterval(tick); garder(); return manuel(); }
@@ -383,8 +386,8 @@ window.CarnetRun = (() => {
         <span class="tirline">Au pas de tir, touche seulement « Repartir » : les cibles touchées se notent dans « Noter les tirs », quand tu as le temps. Le chrono continue si tu fermes : « Plus tard » le retrouve.</span>`);
       clearInterval(tick);
       if (G.depart && !tous) tick = setInterval(() => {
-        if (ferme) return clearInterval(tick); const n = Date.now(), a = box.querySelector("#run-tot"); if (a) a.textContent = mmss(n - G.depart);
-        box.querySelectorAll("[data-gt]").forEach((x) => { x.textContent = mmss(n - G.depart); });
+        if (ferme) return clearInterval(tick); const n = Date.now(), a = box.querySelector("#run-tot"); if (a) a.textContent = vif(n - G.depart);
+        box.querySelectorAll("[data-gt]").forEach((x) => { x.textContent = vif(n - G.depart); });
       }, 100);
       box.addEventListener("change", (ev) => { const x = ev.target.closest("[data-gcible]"); if (!x) return; const g = x.closest("[data-g]"); G.cible[g.dataset.g] = Math.max(1, Number(x.value) || 1); garder(); });
       box.addEventListener("click", (ev) => {
@@ -418,8 +421,8 @@ window.CarnetRun = (() => {
       const box = sheet(`<h3>${esc(libelle(t))}</h3><form id="run-man" style="display:grid;gap:12px">
         ${pris ? `<div class="ar-pts-big">${mmss(r.temps)}<span>Ton temps au chrono. Note maintenant tes tirs.</span></div>` : ""}
         <div class="f" ${pris ? "hidden" : ""}>Temps total<div style="display:flex;gap:8px;align-items:center"><input type="number" inputmode="numeric" name="tmin" min="0" max="599" value="${r.temps != null ? Math.floor(r.temps / 60000) : ""}" placeholder="min" aria-label="Minutes" style="width:6em"><b>min</b>
-          <input type="text" inputmode="decimal" name="tsec" value="${r.temps != null ? String(Math.floor((r.temps % 60000) / 100) / 10).replace(".", ",") : ""}" placeholder="s" aria-label="Secondes" style="width:6em"><b>s</b></div>
-          <span class="tirline">Tu peux le remplir avant ou après tes tirs.</span></div>
+          <input type="text" inputmode="decimal" name="tsec" value="${r.temps != null ? String(Math.round((r.temps % 60000) / 10) / 100).replace(".", ",") : ""}" placeholder="ex. 58,40" aria-label="Secondes" style="width:6em"><b>s</b></div>
+          <span class="tirline">Secondes avec les centièmes si tu les as (ex. 14 min et 58,40 s). Tu peux le remplir avant ou après tes tirs.</span></div>
         ${r.positions.map((p, k) => `<div class="grid3"><label class="f">Tir ${k + 1} (${POS[p]}) : cibles touchées<select name="t${k}">${Array.from({ length: r.cibles + 1 }, (_, n) => `<option ${Number(r.tirs[k]?.touchees ?? r.cibles) === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
           <label class="f">Flèches tirées<select name="f${k}">${Array.from({ length: r.fleches }, (_, n) => n + 1).map((n) => `<option ${Number(r.tirs[k]?.fleches ?? Math.min(r.cibles, r.fleches)) === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
           ${o.impacts !== false ? `<button type="button" class="btn" data-rplace="${k}" style="align-self:end">🎯 ${imps[k]?.length ? "Revoir mes flèches" : "Placer mes flèches"}</button>` : ""}</div><div data-rpbox="${k}"></div>`).join("")}
@@ -434,7 +437,7 @@ window.CarnetRun = (() => {
       f.addEventListener("submit", (ev) => {
         ev.preventDefault();
         const mi = f.tmin.value.trim(), se = f.tsec.value.trim().replace(",", "."), sec = se === "" ? 0 : Number(se);
-        const tot = pris ? r.temps : (mi === "" && se === "") || !isFinite(sec) || sec < 0 || sec >= 60 || !(Number(mi || 0) >= 0) ? null : Math.round((Number(mi || 0) * 60 + sec) * 10) * 100;
+        const tot = pris ? r.temps : (mi === "" && se === "") || !isFinite(sec) || sec < 0 || sec >= 60 || !(Number(mi || 0) >= 0) ? null : Math.round((Number(mi || 0) * 60 + sec) * 100) * 10;
         if (tot == null || (!pris && tot <= 0)) { const c = mi === "" ? f.tmin : f.tsec; c.setCustomValidity("Note ton temps : les minutes dans la première case, les secondes (moins de 60) dans la deuxième"); c.reportValidity(); c.setCustomValidity(""); return; }
         r.temps = tot; r.fini = true; r.manuel = !r.simple; delete r.depart;
         r.tirs = r.positions.map((_, k) => ({ touchees: Number(f["t" + k].value), fleches: Number(f["f" + k].value), ...(imps[k]?.length ? { imp: imps[k] } : {}) }));
