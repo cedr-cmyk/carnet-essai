@@ -247,6 +247,14 @@ window.CarnetRun = (() => {
   const mmss = (ms) => { if (ms == null || !isFinite(ms)) return "—"; const c = Math.round(Math.max(0, ms) / 10), m = Math.floor(c / 6000), sec = Math.floor((c % 6000) / 100), cc = c % 100;
     return `${m}:${String(sec).padStart(2, "0")}${cc % 10 ? "," + String(cc).padStart(2, "0") : c < 60000 || cc ? "," + Math.floor(cc / 10) : ""}`; };
   const vif = (ms) => mmss(Math.floor(ms / 100) * 100); // chrono qui tourne : au dixième
+  // V.1.10 : « Mes points à vérifier avant de tirer » (ceux de l'entraîneur, puis ceux de l'archer)
+  function pointsHtml(p, ouvert) {
+    const c = (p?.coach || []).filter(Boolean), a = (p?.archer || []).filter(Boolean); if (!c.length && !a.length) return "";
+    const li = (l) => l.map((x) => `<li>${esc(x)}</li>`).join("");
+    return `<details class="card pts-tir" ${ouvert ? "open" : ""} style="gap:6px"><summary><b>📋 Mes points à vérifier avant de tirer</b></summary>
+      ${c.length ? `<span class="tirline" style="margin:4px 0 0">De ton entraîneur</span><ul style="margin:0;padding-left:20px">${li(c)}</ul>` : ""}
+      ${a.length ? `<span class="tirline" style="margin:4px 0 0">Les tiens</span><ul style="margin:0;padding-left:20px">${li(a)}</ul>` : ""}</details>`;
+  }
   // accepte 12:45, 12.45, 12,45 ou 12 45 (minutes puis secondes : le clavier chiffres du téléphone n'a pas les deux-points), 45 ou 45,3 (secondes)
   const lireTemps = (x) => { const y = String(x || "").trim(), d = y.match(/^(\d+)[.,\s](\d{2})(?:[.,](\d{1,2}))?$/); if (d) return ((Number(d[1]) * 60) + Number(d[2])) * 1000 + Number((d[3] || "0").padEnd(2, "0")) * 10; const m = String(x || "").trim().match(/^(?:(\d+)[:h'])?(\d{1,2})(?:[,.](\d))?$/) || String(x || "").trim().match(/^(\d+)[:'](\d{1,2})(?:[:'"](\d{1,2}))?$/); if (!m) return null; return ((Number(m[1] || 0) * 60) + Number(m[2])) * 1000 + Number(m[3] || 0) * 100; };
   // étapes : course 1, tir 1, course 2, tir 2… dernière course jusqu'à l'arrivée
@@ -284,7 +292,7 @@ window.CarnetRun = (() => {
     const sheet = (h) => { el.innerHTML = `<div class="sheet-bg"><div class="sheet run-sheet" role="dialog" aria-label="Run-archery">${h}</div></div>`; return el.querySelector(".run-sheet"); };
     function reglage() {
       const f0 = o.kids ? "kids" : "sprint";
-      const box = sheet(`<h3>${esc(o.titre || "Run-archery")}</h3><form id="run-set" style="display:grid;gap:12px">
+      const box = sheet(`<h3>${esc(o.titre || "Run-archery")}</h3>${pointsHtml(o.points, true)}<form id="run-set" style="display:grid;gap:12px">
         <div class="f">Format<div class="radio">${Object.entries(FORMATS).map(([k, v]) => `<label><input type="radio" name="format" value="${k}" ${k === f0 ? "checked" : ""}> ${esc(v.nom)}</label>`).join("")}</div><span class="tirline" id="run-aide">${esc(FORMATS[f0].aide)}</span></div>
         <div class="grid3" id="run-libre" hidden><label class="f">Boucles<input type="number" name="boucles" min="1" max="10" value="3"></label><label class="f">Longueur (m)<input type="number" name="long" min="50" max="3000" step="50" value="400"></label>
           <label class="f">Tirs<input type="number" name="ntirs" min="1" max="6" value="2"></label><label class="f">Pénalité (m)<input type="number" name="penal" min="0" max="500" step="5" value="60"></label><label class="f">Flèches par tir<input type="number" name="fleches" min="1" max="8" value="6"></label></div>
@@ -309,7 +317,7 @@ window.CarnetRun = (() => {
       const depuis = () => (r.depart ? Date.now() - r.depart - r.segs.reduce((s, x) => s + x, 0) : 0);
       const tirN = e?.k === "tir" ? r.tirs[e.n] || (r.tirs[e.n] = { touchees: null, fleches: r.fleches === 4 ? 4 : null }) : null;
       const penAvant = e?.k === "course" && e.n > 0 ? r.cibles - (Number(r.tirs[e.n - 1]?.touchees) || 0) : 0;
-      const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>
+      const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>${pointsHtml(o.points, !t.run.depart)}
         ${fin ? `<div class="ar-pts-big">${mmss(stats(t).temps)}<span>${esc(resume(t))}</span></div>${feuille(t)}` : `
         <div class="ar-pts-big"><span id="run-tot" style="font-size:3.2rem;font-weight:800;color:var(--accent)">${mmss(r.depart ? Date.now() - r.depart : 0)}</span><span>${!r.depart ? "Prêt ?" : e.k === "course" ? `🏃 Boucle ${e.n + 1} / ${r.boucles} · ${r.long} m${penAvant ? ` + ${penAvant} pénalité${penAvant > 1 ? "s" : ""} de ${r.penal} m` : ""}${e.n === r.boucles - 1 ? " → arrivée" : " → pas de tir"}` : `🎯 Tir ${e.n + 1} / ${r.positions.length} · ${POS[r.positions[e.n]]} · ${r.cibles} cibles à ${r.dist} m`}</span>
           ${r.depart ? `<small class="tirline">étape : <span id="run-seg">${vif(depuis())}</span></small>` : ""}</div>
@@ -335,7 +343,7 @@ window.CarnetRun = (() => {
     }
     function simple() {
       const r = t.run;
-      const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>
+      const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>${pointsHtml(o.points, !t.run.depart)}
         <div class="ar-pts-big"><span id="run-tot" style="font-size:3.6rem;font-weight:800;color:var(--accent)">${mmss(r.depart ? Date.now() - r.depart : 0)}</span><span>${r.depart ? "Bon run ! Le chrono tourne, tu noteras tes tirs à l'arrivée." : `${r.boucles} boucles de ${r.long} m · ${r.positions.length} tirs · ${r.penal} m de pénalité par cible manquée`}</span></div>
         <button type="button" class="btn primary" data-sgo style="min-height:96px;font-size:1.5rem">${r.depart ? "🏁 Arrivée" : "▶ Départ"}</button>
         <div class="acts"><button type="button" class="btn danger left" data-rab>Abandonner</button><button type="button" class="btn" data-rquit>Plus tard</button></div>
@@ -746,6 +754,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
   async function load() {
     St.err = ""; St.data = null; render();
     try { API.fichiers(who()); St.data = await API.charger(who());
+      St.points = null; if (API.points) API.points(who()).then((p) => { St.points = p; if (["accueil", "parametres"].includes(St.tab)) render(); }).catch(() => { /* script 26 pas encore lancé */ });
       // thème de fête choisi par l'entraîneur (dans l'aperçu côté entraîneur, la page garde le sien)
       if (!PREVIEW && !TESTW && window.CarnetFete) window.CarnetFete.appliquer(window.CarnetFete.jour((St.data.reglagesEspace || {}).fetes), (St.data.reglagesEspace || {}).fetesAnim !== false, (St.data.reglagesEspace || {}).fetes || null);
     }
@@ -1248,7 +1257,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
   const runData = (t) => { const st = window.CarnetRun.stats(t); return { tcDistance: String(t.run.dist), tcBlason: "Run-archery", compte: String(st.fleches), scoreCompte: "", tcTir: t }; };
   function tirRun() {
     const age = campagneProfil().age;
-    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), surFermer: render }, async (t) => {
+    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: St.points, surFermer: render }, async (t) => {
       if (PREVIEW) { toast("Aperçu : l'archer enregistrera ce run, pas toi"); return; }
       const date = today(), data = { date, saison: `${saisonOf(date) - 1}-${saisonOf(date)}`, objectif: "Run-archery", ...runData(t) };
       let res; try { res = await API.ecrire(who(), "a_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data); } catch (err) { toast("Enregistrement impossible : " + err.message); return; }
@@ -1500,6 +1509,10 @@ window.CarnetArcherUI = (API, opts = {}) => {
         return `<section class="card"><h3 class="hub-h">Mes disciplines</h3>${[["campagne", "⛰ Parcours campagne", "Noter tes parcours cible par cible, avec ta feuille de marque."], ["run", "🏃 Run-archery", "Chrono de ton run et tes tirs à l'arrivée."], ...(window.CarnetFlechettes?.badge(a) ? [["flechettes", "🎯 Fléchettes (test)", "Pose tes fléchettes sur la cible : entraînement, 501, 301 ou Cricket, avec ton groupement."]] : [])].map(ligne).join("")}
           <span class="tirline">Ton entraîneur ouvre ces disciplines. Tu peux lui en demander l'accès ici.</span></section>`;
       })() : ""}
+      ${RUN() && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
+        ${(St.points.coach || []).length ? `<span class="tirline">De ton entraîneur :</span><ul style="margin:0;padding-left:20px">${St.points.coach.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+        <label class="f">Les tiens (un point par ligne)<textarea id="ar-pts" rows="4" maxlength="2000" placeholder="ex. Pieds bien écartés&#10;Je respire avant d'armer">${esc((St.points.archer || []).join("\n"))}</textarea></label>
+        <div class="bar"><span class="tirline" style="flex:1;margin:0">Tu les retrouves au début de chaque run-archery.</span><button class="btn primary" data-act="pts-save">Enregistrer</button></div></section>` : ""}
       <section class="card"><h3 class="hub-h">Accueil</h3>
         <label class="f">Entraînements proposés affichés<select data-pref="nbEnt">${nbs.map(([v, l]) => `<option value="${v}" ${Number(P.nbEnt ?? 3) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
         <span class="tirline">Les suivants restent accessibles avec « Voir les autres ».</span></section>
@@ -1670,6 +1683,12 @@ window.CarnetArcherUI = (API, opts = {}) => {
     if (t.dataset.act === "cp-new") { tirCampagne(); return; }
     if (t.dataset.act === "run-new") { tirRun(); return; }
     if (t.dataset.act === "fl-new") { tirFlechettes(); return; }
+    if (t.dataset.act === "pts-save") {
+      const l = ($("#ar-pts")?.value || "").split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 20).map((x) => x.slice(0, 200));
+      t.disabled = true; API.pointsEcrire(who(), l).then(() => { St.points = { ...(St.points || {}), archer: l }; toast("Tes points sont enregistrés"); })
+        .catch((err) => toast(err.message === "apercu" ? "Aperçu : c'est l'archer qui écrit ses points" : "Enregistrement impossible : " + err.message)).finally(() => { t.disabled = false; });
+      return;
+    }
     if (t.dataset.demande) {
       if (PREVIEW) { toast("Aperçu : c'est l'archer qui fait la demande"); return; }
       const k = t.dataset.demande; t.disabled = true;
