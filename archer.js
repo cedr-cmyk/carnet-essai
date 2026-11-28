@@ -457,7 +457,7 @@ window.CarnetRun = (() => {
     if (t && t.run) (t.run.manuel ? manuel : t.run.simple && !t.run.arrive ? simple : t.run.simple ? manuel : chrono)(); else reglage();
   }
   const enCours = (cle) => { try { return !!localStorage.getItem("carnet-run:" + cle); } catch (e) { return false; } };
-  return { FORMATS, est, ouvert, stats, libelle, resume, feuille, saisir, enCours, mmss, etapes, ouVont };
+  return { FORMATS, est, ouvert, stats, libelle, resume, feuille, saisir, enCours, mmss, etapes, ouVont, pointsHtml };
 })();
 // V.1.10 : fléchettes (discipline de test) — cible classique (20 secteurs, doubles, triples, bull 25 et 50), à 2,37 m.
 // Réservé aux archers Testeur (ou Partenaire) à qui l'entraîneur a ouvert la discipline sur la fiche (espace.flechettes).
@@ -1257,7 +1257,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
   const runData = (t) => { const st = window.CarnetRun.stats(t); return { tcDistance: String(t.run.dist), tcBlason: "Run-archery", compte: String(st.fleches), scoreCompte: "", tcTir: t }; };
   function tirRun() {
     const age = campagneProfil().age;
-    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: TEST() && AVT("points") ? St.points : null, surFermer: render }, async (t) => {
+    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: PTS() ? St.points : null, surFermer: render }, async (t) => {
       if (PREVIEW) { toast("Aperçu : l'archer enregistrera ce run, pas toi"); return; }
       const date = today(), data = { date, saison: `${saisonOf(date) - 1}-${saisonOf(date)}`, objectif: "Run-archery", ...runData(t) };
       let res; try { res = await API.ecrire(who(), "a_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data); } catch (err) { toast("Enregistrement impossible : " + err.message); return; }
@@ -1287,6 +1287,14 @@ window.CarnetArcherUI = (API, opts = {}) => {
       let res; try { res = await API.ecrire(who(), "a_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data); } catch (err) { toast("Enregistrement impossible : " + err.message); return; }
       flFini(t, res); St.saison = saisonOf(date); load();
     });
+  }
+  // V.1.10 (option de test) : « Mes points à vérifier avant de tirer », affichés tout seuls au début de chaque tir (toutes les disciplines)
+  const PTS = () => TEST() && AVT("points") && !!St.points && ((St.points.coach || []).length + (St.points.archer || []).length > 0);
+  function avecPoints() {
+    if (!PTS()) return; let n = 0;
+    const go = () => { const L = document.querySelectorAll(".ar-tgt-layer .sheet"), sh = L[L.length - 1] || document.querySelector("#sheet .sheet"); if (!sh) { if (++n < 20) setTimeout(go, 50); return; } if (sh.querySelector(".pts-tir")) return;
+      const html = window.CarnetRun.pointsHtml(St.points, true), h = sh.querySelector(":scope > h3"); if (h) h.insertAdjacentHTML("afterend", html); else sh.insertAdjacentHTML("afterbegin", html); };
+    setTimeout(go, 0);
   }
   function tirDirect() { if (!M().has("impacts")) return tirSimple(); return tirCible(); }
   // Tir compté sans cible : distance, blason, flèches et score, puis la moyenne et la comparaison avec le tir précédent
@@ -1509,10 +1517,10 @@ window.CarnetArcherUI = (API, opts = {}) => {
         return `<section class="card"><h3 class="hub-h">Mes disciplines</h3>${[["campagne", "⛰ Parcours campagne", "Noter tes parcours cible par cible, avec ta feuille de marque."], ["run", "🏃 Run-archery", "Chrono de ton run et tes tirs à l'arrivée."], ...(window.CarnetFlechettes?.badge(a) ? [["flechettes", "🎯 Fléchettes (test)", "Pose tes fléchettes sur la cible : entraînement, 501, 301 ou Cricket, avec ton groupement."]] : [])].map(ligne).join("")}
           <span class="tirline">Ton entraîneur ouvre ces disciplines. Tu peux lui en demander l'accès ici.</span></section>`;
       })() : ""}
-      ${RUN() && TEST() && AVT("points") && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
+      ${TEST() && AVT("points") && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
         ${(St.points.coach || []).length ? `<span class="tirline">De ton entraîneur :</span><ul style="margin:0;padding-left:20px">${St.points.coach.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
         <label class="f">Les tiens (un point par ligne)<textarea id="ar-pts" rows="4" maxlength="2000" placeholder="ex. Pieds bien écartés&#10;Je respire avant d'armer">${esc((St.points.archer || []).join("\n"))}</textarea></label>
-        <div class="bar"><span class="tirline" style="flex:1;margin:0">Tu les retrouves au début de chaque run-archery.</span><button class="btn primary" data-act="pts-save">Enregistrer</button></div></section>` : ""}
+        <div class="bar"><span class="tirline" style="flex:1;margin:0">Ils s'affichent tout seuls au début de chaque tir : entraînement, tir compté, campagne, run-archery, fléchettes.</span><button class="btn primary" data-act="pts-save">Enregistrer</button></div></section>` : ""}
       <section class="card"><h3 class="hub-h">Accueil</h3>
         <label class="f">Entraînements proposés affichés<select data-pref="nbEnt">${nbs.map(([v, l]) => `<option value="${v}" ${Number(P.nbEnt ?? 3) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
         <span class="tirline">Les suivants restent accessibles avec « Voir les autres ».</span></section>
@@ -1679,10 +1687,10 @@ window.CarnetArcherUI = (API, opts = {}) => {
     }
     if (t.dataset.artc) { St.tcCombo = t.dataset.artc; render(); return; }
     if (t.dataset.artcp) { St.tcPer = t.dataset.artcp; render(); return; }
-    if (t.dataset.act === "tc-new") { tirDirect(); return; }
-    if (t.dataset.act === "cp-new") { tirCampagne(); return; }
+    if (t.dataset.act === "tc-new") { tirDirect(); avecPoints(); return; }
+    if (t.dataset.act === "cp-new") { tirCampagne(); avecPoints(); return; }
     if (t.dataset.act === "run-new") { tirRun(); return; }
-    if (t.dataset.act === "fl-new") { tirFlechettes(); return; }
+    if (t.dataset.act === "fl-new") { tirFlechettes(); avecPoints(); return; }
     if (t.dataset.act === "pts-save") {
       const l = ($("#ar-pts")?.value || "").split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 20).map((x) => x.slice(0, 200));
       t.disabled = true; API.pointsEcrire(who(), l).then(() => { St.points = { ...(St.points || {}), archer: l }; toast("Tes points sont enregistrés"); })
@@ -1701,7 +1709,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
       const x = (St.data.seances || []).find((y) => y.id === t.dataset.seanceAr); if (!x) return;
       const e = St.data.entrees.find((y) => y.seanceId === x.id);
       if (archivee(saisonOf(x.date))) { entryRO(e || { date: x.date, objectif: x.theme || "Entraînement" }); return; }
-      formEntry(e || { id: `s_${x.id}_${who().archer_id}`, seanceId: x.id, date: x.date, objectif: x.theme || "", __new: true });
+      formEntry(e || { id: `s_${x.id}_${who().archer_id}`, seanceId: x.id, date: x.date, objectif: x.theme || "", __new: true }); if (!e) avecPoints();
       return;
     }
     if (t.dataset.act === "vu" || t.dataset.act === "vu-info") { const seen = new Set(lsGet(vuKey(), [])); nouvItems().forEach((x) => seen.add(x.k)); lsSet(vuKey(), [...seen]); render(); return; }
@@ -1729,7 +1737,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
     if (t.dataset.who) { St.cur = +t.dataset.who; load(); return; }
     if (t.dataset.saison) { St.saison += +t.dataset.saison; render(); return; }
     if (t.dataset.entry) { const e = St.data.entrees.find((x) => x.id === t.dataset.entry); if (e?.concoursId) concoursSheet(e); else if (e?.date && archivee(saisonOf(e.date))) entryRO(e); else formEntry(e); return; }
-    if (t.dataset.act === "new") { formEntry(); return; }
+    if (t.dataset.act === "new") { formEntry(); avecPoints(); return; }
     if (t.dataset.act === "reload") { load(); return; }
     if (t.dataset.act === "add-code") {
       const code = prompt("Code d'invitation (pour suivre un autre archer)"); if (!code) return;
