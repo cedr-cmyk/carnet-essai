@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator) {
 </script>
 </head>
 <body>
-<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.54.3 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
+<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.55 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -950,7 +950,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; color:
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="file-in" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.txt,.md,.csv,application/pdf,image/*,video/mp4,video/webm,text/plain,text/markdown,text/csv">
 
-<script>window.CARNET_VERSION = { v: "1.10.54", date: "2026-11-27", site: "1.10.54", test: false };</script>
+<script>window.CARNET_VERSION = { v: "1.10.55", date: "2026-11-28", site: "1.10.55", test: false };</script>
 <script>
 // Espace archer : l'archer (ou son parent) voit uniquement ses propres informations,
 // telles que les renvoie la base (fonction espace_archer), et remplit son carnet.
@@ -1198,7 +1198,8 @@ window.CarnetRun = (() => {
   }
   const ouvert = (a) => a?.espace?.run === true; // ouvert par l'entraîneur sur la fiche de l'archer
   const mmss = (ms) => { if (ms == null || !isFinite(ms)) return "—"; const s = Math.max(0, ms) / 1000, m = Math.floor(s / 60); return `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}${s < 600 ? "," + Math.floor((s * 10) % 10) : ""}`; };
-  const lireTemps = (x) => { const m = String(x || "").trim().match(/^(?:(\d+)[:h'])?(\d{1,2})(?:[,.](\d))?$/) || String(x || "").trim().match(/^(\d+)[:'](\d{1,2})(?:[:'"](\d{1,2}))?$/); if (!m) return null; return ((Number(m[1] || 0) * 60) + Number(m[2])) * 1000 + Number(m[3] || 0) * 100; };
+  // accepte 12:45, 12.45, 12,45 ou 12 45 (minutes puis secondes : le clavier chiffres du téléphone n'a pas les deux-points), 45 ou 45,3 (secondes)
+  const lireTemps = (x) => { const y = String(x || "").trim(), d = y.match(/^(\d+)[.,\s](\d{2})(?:[.,](\d))?$/); if (d) return ((Number(d[1]) * 60) + Number(d[2])) * 1000 + Number(d[3] || 0) * 100; const m = String(x || "").trim().match(/^(?:(\d+)[:h'])?(\d{1,2})(?:[,.](\d))?$/) || String(x || "").trim().match(/^(\d+)[:'](\d{1,2})(?:[:'"](\d{1,2}))?$/); if (!m) return null; return ((Number(m[1] || 0) * 60) + Number(m[2])) * 1000 + Number(m[3] || 0) * 100; };
   // étapes : course 1, tir 1, course 2, tir 2… dernière course jusqu'à l'arrivée
   const etapes = (r) => { const l = []; for (let k = 0; k < r.boucles; k++) { l.push({ k: "course", n: k }); if (k < r.positions.length) l.push({ k: "tir", n: k }); } return l; };
   function stats(t) {
@@ -1370,11 +1371,13 @@ window.CarnetRun = (() => {
       const r = t.run, et = etapes(r), pris = r.simple && r.arrive && !o.tir, imps = r.positions.map((_, k) => r.tirs[k]?.imp || null);
       const box = sheet(`<h3>${esc(libelle(t))}</h3><form id="run-man" style="display:grid;gap:12px">
         ${pris ? `<div class="ar-pts-big">${mmss(r.temps)}<span>Ton temps au chrono. Note maintenant tes tirs.</span></div>` : ""}
-        <label class="f" ${pris ? "hidden" : ""}>Temps total (min:s)<input type="text" inputmode="decimal" name="temps" value="${r.temps != null ? mmss(r.temps) : ""}" placeholder="ex. 12:45" required></label>
+        <div class="f" ${pris ? "hidden" : ""}>Temps total<div style="display:flex;gap:8px;align-items:center"><input type="number" inputmode="numeric" name="tmin" min="0" max="599" value="${r.temps != null ? Math.floor(r.temps / 60000) : ""}" placeholder="min" aria-label="Minutes" style="width:6em"><b>min</b>
+          <input type="text" inputmode="decimal" name="tsec" value="${r.temps != null ? String(Math.floor((r.temps % 60000) / 100) / 10).replace(".", ",") : ""}" placeholder="s" aria-label="Secondes" style="width:6em"><b>s</b></div>
+          <span class="tirline">Tu peux le remplir avant ou après tes tirs.</span></div>
         ${r.positions.map((p, k) => `<div class="grid3"><label class="f">Tir ${k + 1} (${POS[p]}) : cibles touchées<select name="t${k}">${Array.from({ length: r.cibles + 1 }, (_, n) => `<option ${Number(r.tirs[k]?.touchees ?? r.cibles) === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
           <label class="f">Flèches tirées<select name="f${k}">${Array.from({ length: r.fleches }, (_, n) => n + 1).map((n) => `<option ${Number(r.tirs[k]?.fleches ?? Math.min(r.cibles, r.fleches)) === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
           ${o.impacts !== false ? `<button type="button" class="btn" data-rplace="${k}" style="align-self:end">🎯 ${imps[k]?.length ? "Revoir mes flèches" : "Placer mes flèches"}</button>` : ""}</div><div data-rpbox="${k}"></div>`).join("")}
-        <details ${r.simple ? "hidden" : ""}><summary>Temps de chaque étape (facultatif)</summary><div class="grid3">${et.map((e, i) => `<label class="f">${e.k === "course" ? `Boucle ${e.n + 1}` : `Tir ${e.n + 1}`}<input type="text" inputmode="decimal" name="s${i}" value="${r.segs[i] != null ? mmss(r.segs[i]) : ""}" placeholder="min:s"></label>`).join("")}</div></details>
+        <details ${r.simple ? "hidden" : ""}><summary>Temps de chaque étape (facultatif)</summary><div class="grid3">${et.map((e, i) => `<label class="f">${e.k === "course" ? `Boucle ${e.n + 1}` : `Tir ${e.n + 1}`}<input type="text" inputmode="decimal" name="s${i}" value="${r.segs[i] != null ? mmss(r.segs[i]).replace(":", ".") : ""}" placeholder="ex. 3.25"></label>`).join("")}</div></details>
         <div class="acts"><button type="button" class="btn danger left" data-rab>${o.tir ? "Annuler les modifications" : "Abandonner"}</button><button class="btn primary">Enregistrer</button></div></form>`);
       box.querySelector("[data-rab]").addEventListener("click", (ev) => abandon(ev.currentTarget));
       const f = box.querySelector("#run-man");
@@ -1384,7 +1387,9 @@ window.CarnetRun = (() => {
       }));
       f.addEventListener("submit", (ev) => {
         ev.preventDefault();
-        const tot = pris ? r.temps : lireTemps(f.temps.value); if (tot == null) { f.temps.setCustomValidity("Écris le temps en minutes:secondes, par exemple 12:45"); f.temps.reportValidity(); f.temps.setCustomValidity(""); return; }
+        const mi = f.tmin.value.trim(), se = f.tsec.value.trim().replace(",", "."), sec = se === "" ? 0 : Number(se);
+        const tot = pris ? r.temps : (mi === "" && se === "") || !isFinite(sec) || sec < 0 || sec >= 60 || !(Number(mi || 0) >= 0) ? null : Math.round((Number(mi || 0) * 60 + sec) * 10) * 100;
+        if (tot == null || (!pris && tot <= 0)) { const c = mi === "" ? f.tmin : f.tsec; c.setCustomValidity("Note ton temps : les minutes dans la première case, les secondes (moins de 60) dans la deuxième"); c.reportValidity(); c.setCustomValidity(""); return; }
         r.temps = tot; r.fini = true; r.manuel = !r.simple; delete r.depart;
         r.tirs = r.positions.map((_, k) => ({ touchees: Number(f["t" + k].value), fleches: Number(f["f" + k].value), ...(imps[k]?.length ? { imp: imps[k] } : {}) }));
         const segs = et.map((_, i) => lireTemps(f["s" + i].value)); r.segs = segs.every((x) => x != null) ? segs : [];
