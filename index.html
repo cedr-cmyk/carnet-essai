@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator) {
 </script>
 </head>
 <body>
-<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.60 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
+<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.61 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -950,7 +950,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; color:
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="file-in" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.txt,.md,.csv,application/pdf,image/*,video/mp4,video/webm,text/plain,text/markdown,text/csv">
 
-<script>window.CARNET_VERSION = { v: "1.10.60", date: "2026-11-28", site: "1.10.60", test: false };</script>
+<script>window.CARNET_VERSION = { v: "1.10.61", date: "2026-11-28", site: "1.10.61", test: false };</script>
 <script>
 // Espace archer : l'archer (ou son parent) voit uniquement ses propres informations,
 // telles que les renvoie la base (fonction espace_archer), et remplit son carnet.
@@ -1202,13 +1202,7 @@ window.CarnetRun = (() => {
     return `${m}:${String(sec).padStart(2, "0")}${cc % 10 ? "," + String(cc).padStart(2, "0") : c < 60000 || cc ? "," + Math.floor(cc / 10) : ""}`; };
   const vif = (ms) => mmss(Math.floor(ms / 100) * 100); // chrono qui tourne : au dixième
   // V.1.10 : « Mes points à vérifier avant de tirer » (ceux de l'entraîneur, puis ceux de l'archer)
-  function pointsHtml(p, ouvert) {
-    const c = (p?.coach || []).filter(Boolean), a = (p?.archer || []).filter(Boolean); if (!c.length && !a.length) return "";
-    const li = (l) => l.map((x) => `<li>${esc(x)}</li>`).join("");
-    return `<details class="card pts-tir" ${ouvert ? "open" : ""} style="gap:6px"><summary><b>📋 Mes points à vérifier avant de tirer</b></summary>
-      ${c.length ? `<span class="tirline" style="margin:4px 0 0">De ton entraîneur</span><ul style="margin:0;padding-left:20px">${li(c)}</ul>` : ""}
-      ${a.length ? `<span class="tirline" style="margin:4px 0 0">Les tiens</span><ul style="margin:0;padding-left:20px">${li(a)}</ul>` : ""}</details>`;
-  }
+  const pointsHtml = (p, ouvert, ctx) => (window.CarnetPoints ? window.CarnetPoints.html(p, ctx || { disc: "run", dist: 18 }, ouvert) : "");
   // accepte 12:45, 12.45, 12,45 ou 12 45 (minutes puis secondes : le clavier chiffres du téléphone n'a pas les deux-points), 45 ou 45,3 (secondes)
   const lireTemps = (x) => { const y = String(x || "").trim(), d = y.match(/^(\d+)[.,\s](\d{2})(?:[.,](\d{1,2}))?$/); if (d) return ((Number(d[1]) * 60) + Number(d[2])) * 1000 + Number((d[3] || "0").padEnd(2, "0")) * 10; const m = String(x || "").trim().match(/^(?:(\d+)[:h'])?(\d{1,2})(?:[,.](\d))?$/) || String(x || "").trim().match(/^(\d+)[:'](\d{1,2})(?:[:'"](\d{1,2}))?$/); if (!m) return null; return ((Number(m[1] || 0) * 60) + Number(m[2])) * 1000 + Number(m[3] || 0) * 100; };
   // étapes : course 1, tir 1, course 2, tir 2… dernière course jusqu'à l'arrivée
@@ -1246,7 +1240,7 @@ window.CarnetRun = (() => {
     const sheet = (h) => { el.innerHTML = `<div class="sheet-bg"><div class="sheet run-sheet" role="dialog" aria-label="Run-archery">${h}</div></div>`; return el.querySelector(".run-sheet"); };
     function reglage() {
       const f0 = o.kids ? "kids" : "sprint";
-      const box = sheet(`<h3>${esc(o.titre || "Run-archery")}</h3>${pointsHtml(o.points, true)}<form id="run-set" style="display:grid;gap:12px">
+      const box = sheet(`<h3>${esc(o.titre || "Run-archery")}</h3>${pointsHtml(o.points, true, { disc: "run", dist: o.kids ? 12 : 18 })}<form id="run-set" style="display:grid;gap:12px">
         <div class="f">Format<div class="radio">${Object.entries(FORMATS).map(([k, v]) => `<label><input type="radio" name="format" value="${k}" ${k === f0 ? "checked" : ""}> ${esc(v.nom)}</label>`).join("")}</div><span class="tirline" id="run-aide">${esc(FORMATS[f0].aide)}</span></div>
         <div class="grid3" id="run-libre" hidden><label class="f">Boucles<input type="number" name="boucles" min="1" max="10" value="3"></label><label class="f">Longueur (m)<input type="number" name="long" min="50" max="3000" step="50" value="400"></label>
           <label class="f">Tirs<input type="number" name="ntirs" min="1" max="6" value="2"></label><label class="f">Pénalité (m)<input type="number" name="penal" min="0" max="500" step="5" value="60"></label><label class="f">Flèches par tir<input type="number" name="fleches" min="1" max="8" value="6"></label></div>
@@ -1271,7 +1265,7 @@ window.CarnetRun = (() => {
       const depuis = () => (r.depart ? Date.now() - r.depart - r.segs.reduce((s, x) => s + x, 0) : 0);
       const tirN = e?.k === "tir" ? r.tirs[e.n] || (r.tirs[e.n] = { touchees: null, fleches: r.fleches === 4 ? 4 : null }) : null;
       const penAvant = e?.k === "course" && e.n > 0 ? r.cibles - (Number(r.tirs[e.n - 1]?.touchees) || 0) : 0;
-      const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>${pointsHtml(o.points, !t.run.depart)}
+      const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>${pointsHtml(o.points, !t.run.depart, { disc: "run", dist: t.run.dist })}
         ${fin ? `<div class="ar-pts-big">${mmss(stats(t).temps)}<span>${esc(resume(t))}</span></div>${feuille(t)}` : `
         <div class="ar-pts-big"><span id="run-tot" style="font-size:3.2rem;font-weight:800;color:var(--accent)">${mmss(r.depart ? Date.now() - r.depart : 0)}</span><span>${!r.depart ? "Prêt ?" : e.k === "course" ? `🏃 Boucle ${e.n + 1} / ${r.boucles} · ${r.long} m${penAvant ? ` + ${penAvant} pénalité${penAvant > 1 ? "s" : ""} de ${r.penal} m` : ""}${e.n === r.boucles - 1 ? " → arrivée" : " → pas de tir"}` : `🎯 Tir ${e.n + 1} / ${r.positions.length} · ${POS[r.positions[e.n]]} · ${r.cibles} cibles à ${r.dist} m`}</span>
           ${r.depart ? `<small class="tirline">étape : <span id="run-seg">${vif(depuis())}</span></small>` : ""}</div>
@@ -1297,7 +1291,7 @@ window.CarnetRun = (() => {
     }
     function simple() {
       const r = t.run;
-      const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>${pointsHtml(o.points, !t.run.depart)}
+      const box = sheet(`<div class="bar"><b style="font-size:1.15rem">${esc(libelle(t))}</b></div>${pointsHtml(o.points, !t.run.depart, { disc: "run", dist: t.run.dist })}
         <div class="ar-pts-big"><span id="run-tot" style="font-size:3.6rem;font-weight:800;color:var(--accent)">${mmss(r.depart ? Date.now() - r.depart : 0)}</span><span>${r.depart ? "Bon run ! Le chrono tourne, tu noteras tes tirs à l'arrivée." : `${r.boucles} boucles de ${r.long} m · ${r.positions.length} tirs · ${r.penal} m de pénalité par cible manquée`}</span></div>
         <button type="button" class="btn primary" data-sgo style="min-height:96px;font-size:1.5rem">${r.depart ? "🏁 Arrivée" : "▶ Départ"}</button>
         <div class="acts"><button type="button" class="btn danger left" data-rab>Abandonner</button><button type="button" class="btn" data-rquit>Plus tard</button></div>
@@ -1634,6 +1628,54 @@ window.CarnetFlechettes = (() => {
   }
   const enCours = (cle) => { try { return !!localStorage.getItem("carnet-flechettes:" + cle); } catch (e) { return false; } };
   return { est, ouvert, badge, code, val, stats, resume, libelle, feuille, ouVont, cibleSvg, saisir, enCours, JEUX };
+})();
+// V.1.10 (option de test) : points à vérifier avant de tirer, rangés par bloc — général, par discipline, par distance.
+// Forme : { general: ["…"], blocs: [{ k: "disc:campagne" | "dist:18", points: ["…"] }] } (une ancienne liste simple = bloc général).
+window.CarnetPoints = (() => {
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const DISC = [["salle", "Salle"], ["exterieur", "Extérieur"], ["campagne", "Parcours campagne"], ["run", "Run-archery"], ["flechettes", "Fléchettes"], ["3d", "3D"], ["nature", "Nature"]];
+  const DIST = [5, 10, 12, 15, 18, 20, 25, 30, 40, 50, 60, 70, 90];
+  const ORDRE = [...DISC.map(([k]) => "disc:" + k), ...DIST.map((d) => "dist:" + d)];
+  const lib = (k) => { if (k === "general") return "Général"; const [t, v] = String(k).split(":"); return t === "disc" ? (DISC.find(([x]) => x === v)?.[1] || v) : `À ${v} m`; };
+  const liste = (x) => (Array.isArray(x) ? x.map((s) => String(s ?? "").trim()).filter(Boolean) : []);
+  const norm = (p) => (Array.isArray(p) ? { general: liste(p), blocs: [] } : p && typeof p === "object"
+    ? { general: liste(p.general), blocs: (Array.isArray(p.blocs) ? p.blocs : []).filter((b) => b && /^(disc|dist):[a-z0-9]{1,12}$/.test(b.k)).map((b) => ({ k: b.k, points: liste(b.points) })) } : { general: [], blocs: [] });
+  const de = (n, k) => (k === "general" ? n.general : n.blocs.find((b) => b.k === k)?.points || []);
+  const total = (p) => { const n = norm(p); return n.general.length + n.blocs.reduce((s, b) => s + b.points.length, 0); };
+  // contexte du tir : { disc: "run", dist: 18 } → les blocs de ce tir passent en premier, ouverts ; les autres repliés
+  function html(p, ctx = {}, ouvert = true, titre = "📋 Mes points à vérifier avant de tirer") {
+    const c = norm(p?.coach), a = norm(p?.archer); if (!total(c) && !total(a)) return "";
+    const ici = [ctx.disc ? "disc:" + ctx.disc : "", ctx.dist ? "dist:" + String(ctx.dist).replace(/[^0-9]/g, "") : ""].filter(Boolean);
+    const cles = [...new Set(["general", ...ici, ...ORDRE, ...c.blocs.map((b) => b.k), ...a.blocs.map((b) => b.k)])].filter((k) => de(c, k).length || de(a, k).length);
+    const li = (l) => `<ul style="margin:0;padding-left:20px">${l.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    const bloc = (k) => { const lc = de(c, k), la = de(a, k), deux = lc.length && la.length;
+      return `<details ${k === "general" || ici.includes(k) ? "open" : ""} style="margin:2px 0"><summary><b>${esc(lib(k))}</b>${ici.includes(k) ? ' <span class="tag">ce tir</span>' : ""}</summary>
+        ${lc.length ? (deux ? `<span class="tirline" style="margin:2px 0 0">De ton entraîneur</span>` : "") + li(lc) : ""}${la.length ? (deux ? `<span class="tirline" style="margin:2px 0 0">Les tiens</span>` : "") + li(la) : ""}</details>`; };
+    return `<details class="card pts-tir" ${ouvert ? "open" : ""} style="gap:4px"><summary><b>${esc(titre)}</b></summary>${cles.map(bloc).join("")}</details>`;
+  }
+  // éditeur : bloc général + blocs ajoutés (discipline, distance)
+  const zone = (k, l) => `<div class="pt-b" data-ptb="${esc(k)}" style="display:grid;gap:4px"><div class="bar" style="align-items:center"><b>${esc(lib(k))}</b><span class="grow"></span>${k === "general" ? "" : `<button type="button" class="btn ghost" data-ptdel>Retirer</button>`}</div>
+    <textarea rows="3" maxlength="4000" aria-label="${esc(lib(k))} : un point par ligne" placeholder="Un point par ligne">${esc(l.join("\n"))}</textarea></div>`;
+  function options(pris) {
+    const opt = (k) => (pris.has(k) ? "" : `<option value="${k}">${esc(lib(k))}</option>`);
+    return `<option value="">Ajouter un bloc…</option><optgroup label="Discipline">${DISC.map(([k]) => opt("disc:" + k)).join("")}</optgroup><optgroup label="Distance">${DIST.map((d) => opt("dist:" + d)).join("")}</optgroup>`;
+  }
+  function editeur(p) {
+    const n = norm(p), pris = new Set(n.blocs.map((b) => b.k));
+    return `<div class="pt-ed" style="display:grid;gap:10px">${zone("general", n.general)}${n.blocs.map((b) => zone(b.k, b.points)).join("")}
+      <div class="bar pt-add"><select data-ptadd aria-label="Ajouter un bloc">${options(pris)}</select><span class="tirline" style="margin:0">par discipline ou par distance</span></div></div>`;
+  }
+  // boutons de l'éditeur (Retirer, Ajouter un bloc), où qu'il soit affiché
+  const majOpt = (ed) => { const pris = new Set([...ed.querySelectorAll("[data-ptb]")].map((x) => x.dataset.ptb)); ed.querySelector("[data-ptadd]").innerHTML = options(pris); };
+  document.addEventListener("click", (e) => { const b = e.target.closest?.(".pt-ed [data-ptdel]"); if (!b) return; const ed = b.closest(".pt-ed"); b.closest(".pt-b").remove(); majOpt(ed); });
+  document.addEventListener("change", (e) => { const s = e.target.closest?.(".pt-ed [data-ptadd]"); if (!s || !s.value) return; const ed = s.closest(".pt-ed"), k = s.value;
+    ed.querySelector(".pt-add").insertAdjacentHTML("beforebegin", zone(k, [])); majOpt(ed); ed.querySelector(`[data-ptb="${k}"] textarea`)?.focus(); });
+  function lire(root) {
+    const zones = [...root.querySelectorAll(".pt-ed [data-ptb]")], l = (z) => z.querySelector("textarea").value.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 20).map((x) => x.slice(0, 200));
+    const g = zones.find((z) => z.dataset.ptb === "general");
+    return { general: g ? l(g) : [], blocs: zones.filter((z) => z.dataset.ptb !== "general").slice(0, 15).map((z) => ({ k: z.dataset.ptb, points: l(z) })) };
+  }
+  return { html, editeur, lire, norm, total, lib, DISC, DIST };
 })();
 window.CarnetArcherUI = (API, opts = {}) => {
   const API0 = API;
@@ -2243,11 +2285,11 @@ window.CarnetArcherUI = (API, opts = {}) => {
     });
   }
   // V.1.10 (option de test) : « Mes points à vérifier avant de tirer », affichés tout seuls au début de chaque tir (toutes les disciplines)
-  const PTS = () => TEST() && AVT("points") && !!St.points && ((St.points.coach || []).length + (St.points.archer || []).length > 0);
-  function avecPoints() {
+  const PTS = () => TEST() && AVT("points") && !!St.points && !!window.CarnetPoints && window.CarnetPoints.total(St.points.coach) + window.CarnetPoints.total(St.points.archer) > 0;
+  function avecPoints(ctx = {}) {
     if (!PTS()) return; let n = 0;
     const go = () => { const L = document.querySelectorAll(".ar-tgt-layer .sheet"), sh = L[L.length - 1] || document.querySelector("#sheet .sheet"); if (!sh) { if (++n < 20) setTimeout(go, 50); return; } if (sh.querySelector(".pts-tir")) return;
-      const html = window.CarnetRun.pointsHtml(St.points, true), h = sh.querySelector(":scope > h3"); if (h) h.insertAdjacentHTML("afterend", html); else sh.insertAdjacentHTML("afterbegin", html); };
+      const html = window.CarnetPoints.html(St.points, ctx, true), h = sh.querySelector(":scope > h3"); if (h) h.insertAdjacentHTML("afterend", html); else sh.insertAdjacentHTML("afterbegin", html); };
     setTimeout(go, 0);
   }
   function tirDirect() { if (!M().has("impacts")) return tirSimple(); return tirCible(); }
@@ -2471,10 +2513,11 @@ window.CarnetArcherUI = (API, opts = {}) => {
         return `<section class="card"><h3 class="hub-h">Mes disciplines</h3>${[["campagne", "⛰ Parcours campagne", "Noter tes parcours cible par cible, avec ta feuille de marque."], ["run", "🏃 Run-archery", "Chrono de ton run et tes tirs à l'arrivée."], ...(window.CarnetFlechettes?.badge(a) ? [["flechettes", "🎯 Fléchettes (test)", "Pose tes fléchettes sur la cible : entraînement, 501, 301 ou Cricket, avec ton groupement."]] : [])].map(ligne).join("")}
           <span class="tirline">Ton entraîneur ouvre ces disciplines. Tu peux lui en demander l'accès ici.</span></section>`;
       })() : ""}
-      ${TEST() && AVT("points") && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
-        ${(St.points.coach || []).length ? `<span class="tirline">De ton entraîneur :</span><ul style="margin:0;padding-left:20px">${St.points.coach.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-        <label class="f">Les tiens (un point par ligne)<textarea id="ar-pts" rows="4" maxlength="2000" placeholder="ex. Pieds bien écartés&#10;Je respire avant d'armer">${esc((St.points.archer || []).join("\n"))}</textarea></label>
-        <div class="bar"><span class="tirline" style="flex:1;margin:0">Ils s'affichent tout seuls au début de chaque tir : entraînement, tir compté, campagne, run-archery, fléchettes.</span><button class="btn primary" data-act="pts-save">Enregistrer</button></div></section>` : ""}
+      ${TEST() && AVT("points") && St.points && window.CarnetPoints ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
+        ${window.CarnetPoints.total(St.points.coach) ? window.CarnetPoints.html({ coach: St.points.coach }, {}, true, "Les points de ton entraîneur") : ""}
+        <span class="tirline" style="margin:0">Les tiens : un bloc général, et si tu veux un bloc par discipline ou par distance (un point par ligne).</span>
+        <div id="ar-pts-box">${window.CarnetPoints.editeur(St.points.archer)}</div>
+        <div class="bar"><span class="tirline" style="flex:1;margin:0">Ils s'affichent tout seuls au début de chaque tir, rangés par bloc : ceux du tir en premier.</span><button class="btn primary" data-act="pts-save">Enregistrer</button></div></section>` : ""}
       <section class="card"><h3 class="hub-h">Accueil</h3>
         <label class="f">Entraînements proposés affichés<select data-pref="nbEnt">${nbs.map(([v, l]) => `<option value="${v}" ${Number(P.nbEnt ?? 3) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
         <span class="tirline">Les suivants restent accessibles avec « Voir les autres ».</span></section>
@@ -2641,12 +2684,12 @@ window.CarnetArcherUI = (API, opts = {}) => {
     }
     if (t.dataset.artc) { St.tcCombo = t.dataset.artc; render(); return; }
     if (t.dataset.artcp) { St.tcPer = t.dataset.artcp; render(); return; }
-    if (t.dataset.act === "tc-new") { tirDirect(); avecPoints(); return; }
-    if (t.dataset.act === "cp-new") { tirCampagne(); avecPoints(); return; }
+    if (t.dataset.act === "tc-new") { const d = Number(tirDefaut().distance) || 18; tirDirect(); avecPoints({ disc: d <= 25 ? "salle" : "exterieur", dist: d }); return; }
+    if (t.dataset.act === "cp-new") { tirCampagne(); avecPoints({ disc: "campagne" }); return; }
     if (t.dataset.act === "run-new") { tirRun(); return; }
-    if (t.dataset.act === "fl-new") { tirFlechettes(); avecPoints(); return; }
+    if (t.dataset.act === "fl-new") { tirFlechettes(); avecPoints({ disc: "flechettes" }); return; }
     if (t.dataset.act === "pts-save") {
-      const l = ($("#ar-pts")?.value || "").split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 20).map((x) => x.slice(0, 200));
+      const l = window.CarnetPoints.lire($("#ar-pts-box"));
       t.disabled = true; API.pointsEcrire(who(), l).then(() => { St.points = { ...(St.points || {}), archer: l }; toast("Tes points sont enregistrés"); })
         .catch((err) => toast(err.message === "apercu" ? "Aperçu : c'est l'archer qui écrit ses points" : "Enregistrement impossible : " + err.message)).finally(() => { t.disabled = false; });
       return;
@@ -5982,7 +6025,7 @@ async function previewArcher(aid, testWrite = false) {
       await S.db.collection("animations").doc(animId).set({ ...data, updatedAt: Date.now() }); return es?.id || null; } };
   // V.1.10 : points à vérifier avant de tirer
   api.points = async () => ({ coach: a.pointsTir || [], archer: (S.pointsTirArcher || []).find((x) => x.id === aid)?.points || [] });
-  api.pointsEcrire = async (_, l) => { if (!testWrite) throw new Error("apercu"); await S.db.collection("pointsTirArcher").doc(aid).set({ archerId: aid, points: l.slice(0, 20), majLe: Date.now() }); };
+  api.pointsEcrire = async (_, l) => { if (!testWrite) throw new Error("apercu"); await S.db.collection("pointsTirArcher").doc(aid).set({ archerId: aid, points: l, majLe: Date.now() }); };
   if (testWrite) {
     api.ecrire = async (_, id, data) => {
       const cur = (await S.db.collection("carnetEntrees").doc(id).get()), ex = cur.exists ? cur.data() : null;
@@ -6258,12 +6301,14 @@ const prochaineSeance = (a) => S.seances.filter((s) => dansSeance(a, s) && s.dat
 const progPour = (a, s) => (a.programme || []).filter((x) => !x.fait && (x.seanceId === s.id || (!x.seanceId && prochaineSeance(a)?.id === s.id)));
 // V.1.10 (script 26) : points à vérifier avant de tirer (les tiens, et ceux que l'archer a écrits) ; il les voit au début de chaque run-archery. Réservé aux testeurs (et partenaires)
 function pointsTirCard(a) {
+  const CP = window.CarnetPoints; if (!CP) return "";
   const siens = (S.pointsTirArcher || []).find((x) => x.id === a.id)?.points || [];
   return `<div class="card" style="gap:8px"><h3 class="hub-h">📋 Points à vérifier avant de tirer</h3>
-    ${S.canWrite ? `<label class="f">Tes points pour ${esc(a.prenom || fullName(a))} (un par ligne)<textarea id="pt-coach" rows="4" maxlength="2000" placeholder="ex. Épaules basses&#10;Regarder la cible jusqu'à l'impact">${esc((a.pointsTir || []).join("\n"))}</textarea></label>
-      <div class="bar"><span class="tirline" style="flex:1;margin:0">${esc(a.prenom || "L'archer")} les voit tout seul au début de chaque tir (entraînement, tir compté, campagne, run-archery, fléchettes), avec les siens.</span><button class="btn primary" data-act="pt-save" data-id="${esc(a.id)}">Enregistrer</button></div>`
-      : (a.pointsTir || []).length ? `<ul style="margin:0;padding-left:20px">${a.pointsTir.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-    <span class="tirline" style="margin:0">Ses propres points${siens.length ? " :" : " : aucun pour l'instant."}</span>${siens.length ? `<ul style="margin:0;padding-left:20px">${siens.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div>`;
+    ${S.canWrite ? `<span class="tirline" style="margin:0">Tes points pour ${esc(a.prenom || fullName(a))} : un bloc général, puis un bloc par discipline ou par distance si tu veux (un point par ligne).</span>
+      <div id="pt-coach-box">${CP.editeur(a.pointsTir)}</div>
+      <div class="bar"><span class="tirline" style="flex:1;margin:0">${esc(a.prenom || "L'archer")} les voit tout seul au début de chaque tir, rangés par bloc, avec les siens.</span><button class="btn primary" data-act="pt-save" data-id="${esc(a.id)}">Enregistrer</button></div>`
+      : CP.total(a.pointsTir) ? CP.html({ coach: a.pointsTir }, {}, true, "Les points de l'entraîneur") : ""}
+    ${CP.total(siens) ? CP.html({ archer: siens }, {}, false, `Ses propres points (${CP.total(siens)})`) : `<span class="tirline" style="margin:0">Ses propres points : aucun pour l'instant.</span>`}</div>`;
 }
 function programmeCard(a) {
   const pr = a.programme || [], todo = pr.filter((x) => !x.fait), faits = pr.filter((x) => x.fait).sort((p, q) => (q.faitLe || 0) - (p.faitLe || 0)), nx = prochaineSeance(a);
@@ -8663,7 +8708,7 @@ document.addEventListener("click", (e) => {
   if (t.dataset.eval) { openEval(t.dataset.eval); return; }
   if (t.dataset.act === "ar-preview") { previewArcher(S.archer); return; }
   if (t.dataset.act === "pt-save") { const a = S.archers.find((x) => x.id === t.dataset.id); if (!a) return;
-    const l = ($("#pt-coach")?.value || "").split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 20).map((x) => x.slice(0, 200));
+    const l = window.CarnetPoints.lire($("#pt-coach-box"));
     a.pointsTir = l; patch("archers", a.id, { pointsTir: l }); toast("Points enregistrés"); return; }
   if (t.dataset.act === "ar-test" && window.CARNET_TEST) { testArcher(S.archer); return; }
   if (t.dataset.act === "acc-invite" && window.carnetAcces) { window.carnetAcces.inviter(S.archer).then(() => fillAcces(S.archer, true)).catch((e) => toast(e.message)); return; }
