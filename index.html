@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator) {
 </script>
 </head>
 <body>
-<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.58.3 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
+<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.59 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -950,7 +950,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; color:
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="file-in" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.txt,.md,.csv,application/pdf,image/*,video/mp4,video/webm,text/plain,text/markdown,text/csv">
 
-<script>window.CARNET_VERSION = { v: "1.10.58", date: "2026-11-28", site: "1.10.58", test: false };</script>
+<script>window.CARNET_VERSION = { v: "1.10.59", date: "2026-11-28", site: "1.10.59", test: false };</script>
 <script>
 // Espace archer : l'archer (ou son parent) voit uniquement ses propres informations,
 // telles que les renvoie la base (fonction espace_archer), et remplit son carnet.
@@ -2211,7 +2211,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
   const runData = (t) => { const st = window.CarnetRun.stats(t); return { tcDistance: String(t.run.dist), tcBlason: "Run-archery", compte: String(st.fleches), scoreCompte: "", tcTir: t }; };
   function tirRun() {
     const age = campagneProfil().age;
-    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: TEST() ? St.points : null, surFermer: render }, async (t) => {
+    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: TEST() && AVT("points") ? St.points : null, surFermer: render }, async (t) => {
       if (PREVIEW) { toast("Aperçu : l'archer enregistrera ce run, pas toi"); return; }
       const date = today(), data = { date, saison: `${saisonOf(date) - 1}-${saisonOf(date)}`, objectif: "Run-archery", ...runData(t) };
       let res; try { res = await API.ecrire(who(), "a_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data); } catch (err) { toast("Enregistrement impossible : " + err.message); return; }
@@ -2463,7 +2463,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
         return `<section class="card"><h3 class="hub-h">Mes disciplines</h3>${[["campagne", "⛰ Parcours campagne", "Noter tes parcours cible par cible, avec ta feuille de marque."], ["run", "🏃 Run-archery", "Chrono de ton run et tes tirs à l'arrivée."], ...(window.CarnetFlechettes?.badge(a) ? [["flechettes", "🎯 Fléchettes (test)", "Pose tes fléchettes sur la cible : entraînement, 501, 301 ou Cricket, avec ton groupement."]] : [])].map(ligne).join("")}
           <span class="tirline">Ton entraîneur ouvre ces disciplines. Tu peux lui en demander l'accès ici.</span></section>`;
       })() : ""}
-      ${RUN() && TEST() && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
+      ${RUN() && TEST() && AVT("points") && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
         ${(St.points.coach || []).length ? `<span class="tirline">De ton entraîneur :</span><ul style="margin:0;padding-left:20px">${St.points.coach.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
         <label class="f">Les tiens (un point par ligne)<textarea id="ar-pts" rows="4" maxlength="2000" placeholder="ex. Pieds bien écartés&#10;Je respire avant d'armer">${esc((St.points.archer || []).join("\n"))}</textarea></label>
         <div class="bar"><span class="tirline" style="flex:1;margin:0">Tu les retrouves au début de chaque run-archery.</span><button class="btn primary" data-act="pts-save">Enregistrer</button></div></section>` : ""}
@@ -2713,7 +2713,11 @@ const badgesHtml = (a) => { const b = badgesOf(a); return b.length ? `<span clas
 const AVANTAGES = [["retours", "Signaler et proposer des idées", ["testeur", "partenaire"]], ["parcours", "Lien vers l'appli Tir Parcours", ["testeur", "partenaire"]],
   ["fil", "Fil des partenaires", ["partenaire"]], ["carte", "Carte de partenaire", ["partenaire"]], ["bilan", "Bilan de saison", ["partenaire"]],
   ["stage", "Demande de stage personnalisé", ["partenaire"]], ["perso", "Thèmes et avatars exclusifs", ["partenaire"]], ["contenus", "Contenus réservés et avant-première", ["partenaire"]]];
-const aAvantage = (a, k) => { const d = AVANTAGES.find(([x]) => x === k); return !!d && d[2].some((b) => a?.espace?.badges?.[b] === true) && a?.espace?.avantages?.[k] !== false; };
+// V.1.10 : options de test, que l'entraîneur ouvre une par une à chaque testeur (fermées tant qu'il ne les coche pas)
+const TESTS = [["flechettes", "🎯 Fléchettes"], ["points", "📋 Points à vérifier avant de tirer"]];
+const aBadgeTest = (a) => a?.espace?.badges?.testeur === true || a?.espace?.badges?.partenaire === true;
+const testOn = (a, k) => (k === "flechettes" ? a?.espace?.flechettes === true : a?.espace?.avantages?.[k] === true);
+const aAvantage = (a, k) => { if (TESTS.some(([x]) => x === k)) return aBadgeTest(a) && testOn(a, k); const d = AVANTAGES.find(([x]) => x === k); return !!d && d[2].some((b) => a?.espace?.badges?.[b] === true) && a?.espace?.avantages?.[k] !== false; };
 window.CarnetBadges = { liste: BADGES, de: (a) => badgesOf(a), html: (a) => badgesHtml(a), avantage: aAvantage };
 // V.1.10 : avantages des badges — retours (problèmes, idées) envoyés par les testeurs et partenaires (script 17)
 const RT_ST = [["nouveau", "Nouveau"], ["vu", "Vu"], ["retenu", "Retenu"], ["encours", "En cours"], ["fait", "Fait"], ["nonretenu", "Pas retenu"]];
@@ -5645,8 +5649,9 @@ function viewMembres() {
   const carte = (a) => { const avs = AVANTAGES.filter(([, , bs]) => bs.some((b) => a.espace?.badges?.[b] === true)), n = ouverts(a);
     return `<div class="card mb-c"><div class="bar" style="align-items:center;gap:10px">${avatarSvg(a, 40)}<span style="display:grid;gap:3px;min-width:0"><button class="lnk" style="justify-self:start;text-align:left" data-archer="${a.id}"><b>${esc(fullName(a))}</b></button><span class="tirline" style="margin:0">${esc((a.clubIds || []).map(clubName).join(", "))}${n ? ` · ${n} retour${n > 1 ? "s" : ""} à traiter` : ""}</span></span><span class="grow"></span>
       ${BADGES.map(([k, l]) => `<label class="chip mb-b" aria-pressed="${a.espace?.badges?.[k] === true}"><input type="checkbox" class="sr" data-mbbadge="${k}" data-mbar="${a.id}" ${a.espace?.badges?.[k] === true ? "checked" : ""} ${S.canWrite ? "" : "disabled"}>${esc(l)}</label>`).join("")}</div>
+      ${aBadgeTest(a) ? `<span class="tirline" style="margin:8px 0 0">Options de test</span><div class="mb-avs">${TESTS.map(([k, l]) => `<label class="esp-m${testOn(a, k) ? " on" : ""}"><input type="checkbox" data-mbtest="${k}" data-mbar="${a.id}" ${testOn(a, k) ? "checked" : ""} ${S.canWrite ? "" : "disabled"}><span>${esc(l)}</span></label>`).join("")}</div>` : ""}
       ${avs.length ? `<div class="mb-avs">${avs.map(([k, l]) => `<label class="esp-m${a.espace?.avantages?.[k] !== false ? " on" : ""}"><input type="checkbox" data-mbav="${k}" data-mbar="${a.id}" ${a.espace?.avantages?.[k] !== false ? "checked" : ""} ${S.canWrite ? "" : "disabled"}><span>${esc(l)}</span></label>`).join("")}</div>` : ""}</div>`; };
-  return `<div class="card"><span class="tirline" style="margin:0">Tes archers testeurs et partenaires. Coche ou décoche un avantage pour l'ouvrir ou le couper à cet archer. Le nom ouvre sa fiche.</span>
+  return `<div class="card"><span class="tirline" style="margin:0">Tes archers testeurs et partenaires. Coche ou décoche un avantage pour l'ouvrir ou le couper à cet archer. Les options de test restent fermées tant que tu ne les coches pas. Le nom ouvre sa fiche.</span>
       ${S.canWrite && autres.length ? `<div class="bar" style="align-items:flex-end"><label class="f" style="flex:1;min-width:180px" for="mb-ar">Ajouter un archer<select id="mb-ar"><option value="">Choisir…</option>${autres.map((a) => `<option value="${a.id}">${esc(fullName(a))}</option>`).join("")}</select></label>
         <label class="f" for="mb-bd">Badge<select id="mb-bd">${BADGES.map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("")}</select></label><button class="btn primary" data-act="mb-add">Ajouter</button></div>` : ""}</div>
     ${mb.length ? mb.map(carte).join("") : `<p class="notice">Aucun archer testeur ou partenaire pour l'instant.</p>`}`;
@@ -5654,13 +5659,14 @@ function viewMembres() {
 function majBadgeAvantage(aid, kind, k, on) {
   const a = S.archers.find((x) => x.id === aid); if (!a || !S.canWrite) return;
   const v = { ...(a.espace || {}) };
-  if (kind === "badge") v.badges = { ...(v.badges || {}), [k]: on }; else v.avantages = { ...(v.avantages || {}), [k]: on };
+  if (kind === "badge") v.badges = { ...(v.badges || {}), [k]: on }; else if (kind === "test" && k === "flechettes") { v.flechettes = on; if (on && v.demandes?.flechettes) v.demandes = { ...v.demandes, flechettes: { ...v.demandes.flechettes, statut: "acceptee" } }; } else v.avantages = { ...(v.avantages || {}), [k]: on };
   a.espace = v; patch("archers", a.id, { espace: v });
-  toast(kind === "badge" ? (on ? "Badge ajouté" : "Badge retiré") : `${AVANTAGES.find(([x]) => x === k)?.[1]} : ${on ? "ouvert" : "coupé"} pour ${a.prenom || fullName(a)}`); render();
+  toast(kind === "badge" ? (on ? "Badge ajouté" : "Badge retiré") : `${(kind === "test" ? TESTS : AVANTAGES).find(([x]) => x === k)?.[1]} : ${on ? "ouvert" : "coupé"} pour ${a.prenom || fullName(a)}`); render();
 }
 document.addEventListener("change", (e) => { const t = e.target; if (!t.dataset) return;
   if (t.dataset.mbbadge) majBadgeAvantage(t.dataset.mbar, "badge", t.dataset.mbbadge, t.checked);
-  else if (t.dataset.mbav) majBadgeAvantage(t.dataset.mbar, "av", t.dataset.mbav, t.checked); });
+  else if (t.dataset.mbav) majBadgeAvantage(t.dataset.mbar, "av", t.dataset.mbav, t.checked);
+  else if (t.dataset.mbtest) majBadgeAvantage(t.dataset.mbar, "test", t.dataset.mbtest, t.checked); });
 document.addEventListener("click", (e) => { if (!e.target.closest('[data-act="mb-add"]')) return; const aid = $("#mb-ar")?.value, b = $("#mb-bd")?.value; if (!aid) { toast("Choisis un archer"); return; } majBadgeAvantage(aid, "badge", b, true); });
 function viewRetours() {
   const vue = S.rtVue || (rtNouveaux().length ? "retours" : filNonLus().length ? "fil" : "membres"), nfl = filNonLus().length;
@@ -6322,7 +6328,7 @@ function viewArcher() {
     ${(() => { const ms = pretsOf(a.id); return ms.length ? `<div class="notice" style="font-family:var(--font-body)">Matériel prêté : ${ms.map((m) => `${esc(matShort(m))} (${[tailleTxt(m), m.puissance ? m.puissance + " lbs" : "", m.modele, clubName(m.clubId)].filter(Boolean).map(esc).join(", ")})`).join(" · ")}</div>` : ""; })()}
     <div class="card"><label class="f" for="archer-notes">Notes techniques et objectifs</label>
       <textarea id="archer-notes" placeholder="Points à travailler, réglages, objectifs de la saison…" ${S.canWrite ? "" : "readonly"}>${esc(a.notes || "")}</textarea></div>`,
-    seances: () => programmeCard(a) + (FL.badge(a) ? pointsTirCard(a) : "") + seancesArcherCard(a),
+    seances: () => programmeCard(a) + (aAvantage(a, "points") ? pointsTirCard(a) : "") + seancesArcherCard(a),
     concours: () => `    ${archerConcours(a)}
     ${progressScores(a)}`,
     technique: () => `    ${evs.length >= 2 ? (() => {

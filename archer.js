@@ -1257,7 +1257,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
   const runData = (t) => { const st = window.CarnetRun.stats(t); return { tcDistance: String(t.run.dist), tcBlason: "Run-archery", compte: String(st.fleches), scoreCompte: "", tcTir: t }; };
   function tirRun() {
     const age = campagneProfil().age;
-    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: TEST() ? St.points : null, surFermer: render }, async (t) => {
+    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: TEST() && AVT("points") ? St.points : null, surFermer: render }, async (t) => {
       if (PREVIEW) { toast("Aperçu : l'archer enregistrera ce run, pas toi"); return; }
       const date = today(), data = { date, saison: `${saisonOf(date) - 1}-${saisonOf(date)}`, objectif: "Run-archery", ...runData(t) };
       let res; try { res = await API.ecrire(who(), "a_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data); } catch (err) { toast("Enregistrement impossible : " + err.message); return; }
@@ -1509,7 +1509,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
         return `<section class="card"><h3 class="hub-h">Mes disciplines</h3>${[["campagne", "⛰ Parcours campagne", "Noter tes parcours cible par cible, avec ta feuille de marque."], ["run", "🏃 Run-archery", "Chrono de ton run et tes tirs à l'arrivée."], ...(window.CarnetFlechettes?.badge(a) ? [["flechettes", "🎯 Fléchettes (test)", "Pose tes fléchettes sur la cible : entraînement, 501, 301 ou Cricket, avec ton groupement."]] : [])].map(ligne).join("")}
           <span class="tirline">Ton entraîneur ouvre ces disciplines. Tu peux lui en demander l'accès ici.</span></section>`;
       })() : ""}
-      ${RUN() && TEST() && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
+      ${RUN() && TEST() && AVT("points") && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
         ${(St.points.coach || []).length ? `<span class="tirline">De ton entraîneur :</span><ul style="margin:0;padding-left:20px">${St.points.coach.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
         <label class="f">Les tiens (un point par ligne)<textarea id="ar-pts" rows="4" maxlength="2000" placeholder="ex. Pieds bien écartés&#10;Je respire avant d'armer">${esc((St.points.archer || []).join("\n"))}</textarea></label>
         <div class="bar"><span class="tirline" style="flex:1;margin:0">Tu les retrouves au début de chaque run-archery.</span><button class="btn primary" data-act="pts-save">Enregistrer</button></div></section>` : ""}
