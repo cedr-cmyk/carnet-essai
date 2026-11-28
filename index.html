@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator) {
 </script>
 </head>
 <body>
-<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.57.2 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
+<div role="note" style="background:linear-gradient(90deg,#78350F,#0E7490);color:#fff;text-align:center;font:700 .85rem system-ui,sans-serif;padding:6px 16px">Copie d'essai de la V.1.10.58.3 · tes vraies données · le carnet normal reste sur cedr-cmyk.github.io/carnet-entraineur</div>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -950,7 +950,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; color:
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="file-in" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.txt,.md,.csv,application/pdf,image/*,video/mp4,video/webm,text/plain,text/markdown,text/csv">
 
-<script>window.CARNET_VERSION = { v: "1.10.57", date: "2026-11-28", site: "1.10.57", test: false };</script>
+<script>window.CARNET_VERSION = { v: "1.10.58", date: "2026-11-28", site: "1.10.58", test: false };</script>
 <script>
 // Espace archer : l'archer (ou son parent) voit uniquement ses propres informations,
 // telles que les renvoie la base (fonction espace_archer), et remplit son carnet.
@@ -2211,7 +2211,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
   const runData = (t) => { const st = window.CarnetRun.stats(t); return { tcDistance: String(t.run.dist), tcBlason: "Run-archery", compte: String(st.fleches), scoreCompte: "", tcTir: t }; };
   function tirRun() {
     const age = campagneProfil().age;
-    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: St.points, surFermer: render }, async (t) => {
+    window.CarnetRun.saisir({ cle: runCle(), titre: "Run-archery", kids: age != null && age < 15, simple: true, impacts: M().has("impacts"), points: TEST() ? St.points : null, surFermer: render }, async (t) => {
       if (PREVIEW) { toast("Aperçu : l'archer enregistrera ce run, pas toi"); return; }
       const date = today(), data = { date, saison: `${saisonOf(date) - 1}-${saisonOf(date)}`, objectif: "Run-archery", ...runData(t) };
       let res; try { res = await API.ecrire(who(), "a_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), data); } catch (err) { toast("Enregistrement impossible : " + err.message); return; }
@@ -2463,7 +2463,7 @@ window.CarnetArcherUI = (API, opts = {}) => {
         return `<section class="card"><h3 class="hub-h">Mes disciplines</h3>${[["campagne", "⛰ Parcours campagne", "Noter tes parcours cible par cible, avec ta feuille de marque."], ["run", "🏃 Run-archery", "Chrono de ton run et tes tirs à l'arrivée."], ...(window.CarnetFlechettes?.badge(a) ? [["flechettes", "🎯 Fléchettes (test)", "Pose tes fléchettes sur la cible : entraînement, 501, 301 ou Cricket, avec ton groupement."]] : [])].map(ligne).join("")}
           <span class="tirline">Ton entraîneur ouvre ces disciplines. Tu peux lui en demander l'accès ici.</span></section>`;
       })() : ""}
-      ${RUN() && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
+      ${RUN() && TEST() && St.points ? `<section class="card"><h3 class="hub-h">📋 Mes points à vérifier avant de tirer</h3>
         ${(St.points.coach || []).length ? `<span class="tirline">De ton entraîneur :</span><ul style="margin:0;padding-left:20px">${St.points.coach.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
         <label class="f">Les tiens (un point par ligne)<textarea id="ar-pts" rows="4" maxlength="2000" placeholder="ex. Pieds bien écartés&#10;Je respire avant d'armer">${esc((St.points.archer || []).join("\n"))}</textarea></label>
         <div class="bar"><span class="tirline" style="flex:1;margin:0">Tu les retrouves au début de chaque run-archery.</span><button class="btn primary" data-act="pts-save">Enregistrer</button></div></section>` : ""}
@@ -6242,7 +6242,7 @@ function coachTir(id) {
 // a.programme = [{ id, texte, seanceId (vide = la prochaine séance), fait, faitLe, createdAt }] — visible par l'entraîneur seulement
 const prochaineSeance = (a) => S.seances.filter((s) => dansSeance(a, s) && s.date >= todayISO()).sort((x, y) => (x.date + (x.heure || "")).localeCompare(y.date + (y.heure || "")))[0] || null;
 const progPour = (a, s) => (a.programme || []).filter((x) => !x.fait && (x.seanceId === s.id || (!x.seanceId && prochaineSeance(a)?.id === s.id)));
-// V.1.10 (script 26) : points à vérifier avant de tirer (les tiens, et ceux que l'archer a écrits) ; il les voit au début de chaque run-archery
+// V.1.10 (script 26) : points à vérifier avant de tirer (les tiens, et ceux que l'archer a écrits) ; il les voit au début de chaque run-archery. Réservé aux testeurs (et partenaires)
 function pointsTirCard(a) {
   const siens = (S.pointsTirArcher || []).find((x) => x.id === a.id)?.points || [];
   return `<div class="card" style="gap:8px"><h3 class="hub-h">📋 Points à vérifier avant de tirer</h3>
@@ -6322,7 +6322,7 @@ function viewArcher() {
     ${(() => { const ms = pretsOf(a.id); return ms.length ? `<div class="notice" style="font-family:var(--font-body)">Matériel prêté : ${ms.map((m) => `${esc(matShort(m))} (${[tailleTxt(m), m.puissance ? m.puissance + " lbs" : "", m.modele, clubName(m.clubId)].filter(Boolean).map(esc).join(", ")})`).join(" · ")}</div>` : ""; })()}
     <div class="card"><label class="f" for="archer-notes">Notes techniques et objectifs</label>
       <textarea id="archer-notes" placeholder="Points à travailler, réglages, objectifs de la saison…" ${S.canWrite ? "" : "readonly"}>${esc(a.notes || "")}</textarea></div>`,
-    seances: () => programmeCard(a) + pointsTirCard(a) + seancesArcherCard(a),
+    seances: () => programmeCard(a) + (FL.badge(a) ? pointsTirCard(a) : "") + seancesArcherCard(a),
     concours: () => `    ${archerConcours(a)}
     ${progressScores(a)}`,
     technique: () => `    ${evs.length >= 2 ? (() => {
